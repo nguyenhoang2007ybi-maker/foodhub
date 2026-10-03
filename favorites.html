@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quán ăn yêu thích - FoodHub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#ab3500",
+            "primary-container": "#ff6b35",
+            "on-primary": "#ffffff",
+            surface: "#f9f9ff",
+            "on-surface": "#151c27",
+            "on-surface-variant": "#594139",
+            secondary: "#5f5e5e",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f0f3ff",
+            "surface-container": "#e7eefe",
+            "surface-container-high": "#e2e8f8"
+          },
+          fontFamily: { sans: ["Inter", "sans-serif"] }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface font-sans text-on-surface antialiased min-h-screen flex flex-col justify-between">
+  <header></header>
+
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Breadcrumb & Header -->
+    <div class="mb-8">
+      <div class="flex items-center gap-2 text-xs text-secondary mb-2">
+        <a href="/index.html" class="hover:text-primary transition-colors">Trang chủ</a>
+        <span>/</span>
+        <span class="text-on-surface font-semibold">Quán ăn yêu thích</span>
+      </div>
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 class="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight flex items-center gap-2.5">
+            <span class="material-symbols-outlined text-rose-500 text-[30px]" style="font-variation-settings: 'FILL' 1;">favorite</span>
+            <span>Bộ sưu tập quán ăn yêu thích</span>
+          </h1>
+          <p class="text-sm text-secondary mt-1">Các địa điểm ẩm thực bạn đã lưu lại để thưởng thức</p>
+        </div>
+
+        <div id="fav-count-pill" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface-container-low text-xs font-semibold text-secondary self-start sm:self-auto">
+          <span class="material-symbols-outlined text-[16px] text-rose-500">bookmark</span>
+          <span id="fav-total-text">Đang tải...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Favorites Grid -->
+    <div id="fav-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      <!-- Loading skeletons -->
+    </div>
+
+    <!-- Empty State -->
+    <div id="fav-empty" class="hidden bg-surface-container-lowest border border-surface-container-high rounded-3xl p-12 text-center max-w-lg mx-auto my-12 shadow-sm">
+      <div class="w-16 h-16 rounded-full bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-4">
+        <span class="material-symbols-outlined text-[32px]">favorite_border</span>
+      </div>
+      <h3 class="text-lg font-bold text-on-surface mb-2">Danh sách yêu thích đang trống</h3>
+      <p class="text-sm text-secondary mb-6 leading-relaxed">
+        Bạn chưa lưu quán ăn nào. Hãy khám phá thực đơn phong phú và nhấn vào biểu tượng trái tim để lưu lại những quán bạn ưng ý nhất!
+      </p>
+      <a href="/explore.html" class="inline-flex items-center gap-2 h-11 px-6 rounded-full bg-primary-container hover:bg-primary text-on-primary font-bold text-xs transition-all shadow-sm">
+        <span class="material-symbols-outlined text-[18px]">explore</span>
+        <span>Khám phá quán ngay</span>
+      </a>
+    </div>
+  </main>
+
+  <footer></footer>
+
+  <script type="module" src="/src/favorites.js"></script>
+</body>
+</html>

@@ -46,37 +46,7 @@
 </head>
 
 <body class="bg-surface font-body-md text-body-md text-on-surface antialiased">
-  <header class="sticky top-0 z-50 w-full bg-surface-container-lowest border-b border-surface-container-high">
-    <div class="h-[72px] max-w-7xl mx-auto px-margin flex items-center justify-between gap-space-lg">
-      <div class="flex items-center gap-space-xl flex-shrink-0"><a class="flex items-center gap-1 text-decoration-none"
-          data-path="trang-chu" href="#"><span
-            class="font-display text-display text-primary leading-none tracking-tight">Food</span><span
-            class="font-display text-display text-on-surface leading-none tracking-tight">Hub</span></a>
-        <nav class="hidden md:flex items-center gap-space-lg" data-active-classes="text-primary font-bold"><a
-            class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors"
-            data-path="trang-chu" href="#">Trang chủ</a><a
-            class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors"
-            data-path="kham-pha" href="#">Khám phá</a><a
-            class="font-label-md text-label-md text-on-surface-variant hover:text-on-surface transition-colors relative flex items-center gap-1.5"
-            data-path="yeu-thich" href="#"><span>Yêu thích</span><span
-              class="inline-flex items-center justify-center px-1.5 py-0.5 font-label-sm text-label-sm bg-primary-container text-on-primary rounded-full min-w-[18px] text-center leading-none">0</span></a>
-        </nav>
-      </div>
-      <div class="flex-1 max-w-md hidden sm:block">
-        <div class="relative flex items-center w-full"><span
-            class="material-symbols-outlined absolute left-3 text-secondary text-[20px] pointer-events-none">search</span><input
-            class="w-full h-11 pl-10 pr-4 bg-surface-container-low border border-surface-container-high rounded-xl font-body-md text-body-md text-on-surface placeholder:text-secondary focus:outline-none focus:border-primary-container transition-colors"
-            placeholder="Tìm quán ăn, món ngon..." type="search" /></div>
-      </div>
-      <div class="flex items-center gap-space-md flex-shrink-0"><button
-          class="inline-flex items-center gap-1.5 h-10 px-4 bg-primary-container hover:bg-primary text-on-primary font-label-md text-label-md rounded-xl transition-colors"
-          type="button"><span class="material-symbols-outlined text-[18px]">edit_square</span><span
-            class="hidden xs:inline">Viết đánh giá</span></button>
-        <div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0"><span
-            class="material-symbols-outlined text-on-primary text-[18px]">person</span></div>
-      </div>
-    </div>
-  </header>
+  <header></header>
   <main class="w-full max-w-7xl mx-auto px-margin min-h-[calc(100vh-72px)] py-space-xl">
     <div class="flex flex-col w-full">
       <!-- 1. HERO SECTION -->
@@ -680,25 +650,9 @@
       })();
     </script>
   </main>
-  <footer class="w-full bg-surface-container-lowest border-t border-surface-container-high py-space-xl">
-    <div class="max-w-7xl mx-auto px-margin flex flex-col md:flex-row items-center justify-between gap-space-md">
-      <div class="flex flex-col items-center md:items-start gap-1">
-        <div class="flex items-center gap-1"><span
-            class="font-headline-sm text-headline-sm text-primary">Food</span><span
-            class="font-headline-sm text-headline-sm text-on-surface">Hub</span></div>
-        <p class="font-body-sm text-body-sm text-secondary text-center md:text-left">© 2025 FoodHub - Đồ án thực hành
-          Web Frontend (HTML/CSS/JS)</p>
-      </div>
-      <nav class="flex flex-wrap items-center justify-center gap-space-lg"
-        data-active-classes="text-primary font-semibold"><a
-          class="font-label-md text-label-md text-secondary hover:text-on-surface transition-colors"
-          data-path="ve-du-an" href="#">Về dự án</a><a
-          class="font-label-md text-label-md text-secondary hover:text-on-surface transition-colors"
-          data-path="huong-dan-localstorage" href="#">Hướng dẫn sử dụng LocalStorage</a><a
-          class="font-label-md text-label-md text-secondary hover:text-on-surface transition-colors"
-          data-path="danh-muc-quan-an" href="#">Danh mục quán ăn</a></nav>
-    </div>
-  </footer>
+  <footer></footer>
+
+  <script type="module" src="/src/home.js"></script>
 </body>
 
 </html>

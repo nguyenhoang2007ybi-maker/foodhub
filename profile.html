@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hồ sơ cá nhân - FoodHub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#ab3500",
+            "primary-container": "#ff6b35",
+            "on-primary": "#ffffff",
+            surface: "#f9f9ff",
+            "on-surface": "#151c27",
+            "on-surface-variant": "#594139",
+            secondary: "#5f5e5e",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f0f3ff",
+            "surface-container": "#e7eefe",
+            "surface-container-high": "#e2e8f8"
+          },
+          fontFamily: { sans: ["Inter", "sans-serif"] }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface font-sans text-on-surface antialiased min-h-screen flex flex-col justify-between">
+  <header></header>
+
+  <main class="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="mb-8">
+      <div class="flex items-center gap-2 text-xs text-secondary mb-2">
+        <a href="/index.html" class="hover:text-primary transition-colors">Trang chủ</a>
+        <span>/</span>
+        <span class="text-on-surface font-semibold">Tài khoản</span>
+      </div>
+      <h1 class="text-2xl sm:text-3xl font-extrabold text-on-surface tracking-tight">Hồ sơ & Tài khoản của bạn</h1>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+      <!-- Left Column: User Summary Card & Tabs -->
+      <div class="lg:col-span-4 space-y-6">
+        <!-- Profile Overview Card -->
+        <div class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-6 text-center shadow-sm">
+          <div class="relative inline-block mx-auto mb-4">
+            <img
+              id="profile-avatar"
+              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+              alt="Avatar"
+              class="w-24 h-24 rounded-full object-cover ring-4 ring-primary-container/20 mx-auto"
+            />
+          </div>
+
+          <h2 id="profile-name" class="text-lg font-bold text-on-surface">Đang tải...</h2>
+          <p id="profile-email" class="text-xs text-secondary mt-0.5"></p>
+          <div class="mt-2.5 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold" id="profile-role-badge">
+            <!-- Populated by JS -->
+          </div>
+
+          <!-- Quick Stats Counter -->
+          <div class="grid grid-cols-2 gap-3 mt-6 pt-6 border-t border-surface-container-high">
+            <div class="p-3 rounded-2xl bg-surface-container-low text-center">
+              <span id="stat-reviews" class="block text-lg font-extrabold text-primary">0</span>
+              <span class="text-[11px] text-secondary font-medium">Đánh giá đã viết</span>
+            </div>
+            <div class="p-3 rounded-2xl bg-surface-container-low text-center">
+              <span id="stat-favorites" class="block text-lg font-extrabold text-rose-500">0</span>
+              <span class="text-[11px] text-secondary font-medium">Quán đã lưu</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="bg-surface-container-lowest border border-surface-container-high rounded-2xl p-2 shadow-sm space-y-1">
+          <button id="tab-info-btn" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-bold text-left transition-all bg-primary-container text-on-primary">
+            <span class="material-symbols-outlined text-[18px]">manage_accounts</span>
+            <span>Thông tin cá nhân</span>
+          </button>
+          <button id="tab-password-btn" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low text-left transition-all">
+            <span class="material-symbols-outlined text-[18px]">lock_reset</span>
+            <span>Đổi mật khẩu</span>
+          </button>
+          <button id="tab-my-reviews-btn" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low text-left transition-all">
+            <span class="material-symbols-outlined text-[18px]">rate_review</span>
+            <span>Đánh giá của tôi</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Right Column: Tab Panels -->
+      <div class="lg:col-span-8">
+        <!-- Panel 1: Update Profile Info -->
+        <div id="panel-info" class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-6 sm:p-8 shadow-sm">
+          <div class="mb-6 pb-4 border-b border-surface-container-high">
+            <h3 class="text-lg font-bold text-on-surface">Cập nhật thông tin tài khoản</h3>
+            <p class="text-xs text-secondary mt-1">Quản lý họ tên, số điện thoại và ảnh đại diện</p>
+          </div>
+
+          <form id="update-profile-form" class="space-y-5">
+            <div>
+              <label for="edit-name" class="block text-xs font-bold text-on-surface mb-1.5">Họ và tên:</label>
+              <input
+                id="edit-name"
+                type="text"
+                required
+                class="w-full h-11 px-4 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest transition-all"
+              />
+            </div>
+
+            <div>
+              <label for="edit-email" class="block text-xs font-bold text-on-surface mb-1.5">Email (không thể thay đổi):</label>
+              <input
+                id="edit-email"
+                type="email"
+                disabled
+                class="w-full h-11 px-4 bg-surface-container-high/60 border border-surface-container-high rounded-xl text-xs text-secondary cursor-not-allowed"
+              />
+            </div>
+
+            <div>
+              <label for="edit-phone" class="block text-xs font-bold text-on-surface mb-1.5">Số điện thoại liên hệ:</label>
+              <input
+                id="edit-phone"
+                type="tel"
+                placeholder="0912345678"
+                class="w-full h-11 px-4 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest transition-all"
+              />
+            </div>
+
+            <div>
+              <label for="edit-avatar" class="block text-xs font-bold text-on-surface mb-1.5">Đường dẫn ảnh đại diện (URL):</label>
+              <input
+                id="edit-avatar"
+                type="url"
+                placeholder="https://..."
+                class="w-full h-11 px-4 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest transition-all"
+              />
+            </div>
+
+            <button
+              id="save-profile-btn"
+              type="submit"
+              class="h-11 px-6 rounded-xl bg-primary-container hover:bg-primary text-on-primary font-bold text-xs shadow-sm transition-all cursor-pointer flex items-center gap-2"
+            >
+              <span>Lưu thay đổi</span>
+              <span class="material-symbols-outlined text-[18px]">save</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Panel 2: Change Password -->
+        <div id="panel-password" class="hidden bg-surface-container-lowest border border-surface-container-high rounded-3xl p-6 sm:p-8 shadow-sm">
+          <div class="mb-6 pb-4 border-b border-surface-container-high">
+            <h3 class="text-lg font-bold text-on-surface">Đổi mật khẩu tài khoản</h3>
+            <p class="text-xs text-secondary mt-1">Đảm bảo mật khẩu của bạn có độ dài tối thiểu 6 ký tự để bảo vệ tài khoản</p>
+          </div>
+
+          <form id="change-pwd-form" class="space-y-5">
+            <div>
+              <label for="current-password" class="block text-xs font-bold text-on-surface mb-1.5">Mật khẩu hiện tại:</label>
+              <input
+                id="current-password"
+                type="password"
+                required
+                class="w-full h-11 px-4 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest transition-all"
+              />
+            </div>
+
+            <div>
+              <label for="new-password" class="block text-xs font-bold text-on-surface mb-1.5">Mật khẩu mới (tối thiểu 6 ký tự):</label>
+              <input
+                id="new-password"
+                type="password"
+                required
+                minlength="6"
+                class="w-full h-11 px-4 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest transition-all"
+              />
+            </div>
+
+            <div>
+              <label for="confirm-new-password" class="block text-xs font-bold text-on-surface mb-1.5">Xác nhận mật khẩu mới:</label>
+              <input
+                id="confirm-new-password"
+                type="password"
+                required
+                minlength="6"
+                class="w-full h-11 px-4 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest transition-all"
+              />
+            </div>
+
+            <button
+              id="change-pwd-btn"
+              type="submit"
+              class="h-11 px-6 rounded-xl bg-primary-container hover:bg-primary text-on-primary font-bold text-xs shadow-sm transition-all cursor-pointer flex items-center gap-2"
+            >
+              <span>Cập nhật mật khẩu</span>
+              <span class="material-symbols-outlined text-[18px]">verified</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- Panel 3: My Reviews -->
+        <div id="panel-my-reviews" class="hidden bg-surface-container-lowest border border-surface-container-high rounded-3xl p-6 sm:p-8 shadow-sm">
+          <div class="mb-6 pb-4 border-b border-surface-container-high flex items-center justify-between">
+            <div>
+              <h3 class="text-lg font-bold text-on-surface">Đánh giá bạn đã đăng</h3>
+              <p class="text-xs text-secondary mt-1">Danh sách tất cả các bài đánh giá của bạn trên hệ thống</p>
+            </div>
+            <span id="my-reviews-total-badge" class="px-3 py-1 rounded-full text-xs font-bold bg-primary-container/15 text-primary">0 đánh giá</span>
+          </div>
+
+          <div id="my-reviews-list" class="space-y-4">
+            <!-- Populated dynamically -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer></footer>
+
+  <script type="module" src="/src/profile.js"></script>
+</body>
+</html>
