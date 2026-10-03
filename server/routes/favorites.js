@@ -121,3 +121,4 @@ router.delete('/:restaurantId', authenticateToken, (req, res) => {
 });
 
 export default router;
+

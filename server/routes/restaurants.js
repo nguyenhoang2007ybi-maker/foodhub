@@ -309,3 +309,4 @@ router.delete('/:id', authenticateToken, requireAdmin, (req, res) => {
 });
 
 export default router;
+

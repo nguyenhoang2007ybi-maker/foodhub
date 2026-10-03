@@ -23,29 +23,29 @@ let failed = 0;
 
 function assert(condition, message) {
   if (condition) {
-    console.log(`  ✓ ${message}`);
+    console.log(`✓ ${message} - test-api.js:26`);
     passed++;
   } else {
-    console.error(`  ✗ FAIL: ${message}`);
+    console.error(`✗ FAIL: ${message} - test-api.js:29`);
     failed++;
   }
 }
 
 async function runTests() {
-  console.log('========================================================');
-  console.log('       BẮT ĐẦU KIỂM THỬ TỰ ĐỘNG FOODHUB BACKEND         ');
-  console.log('========================================================\n');
+  console.log('======================================================== - test-api.js:35');
+  console.log('BẮT ĐẦU KIỂM THỬ TỰ ĐỘNG FOODHUB BACKEND - test-api.js:36');
+  console.log('========================================================\n - test-api.js:37');
 
   let adminToken = '';
   let customerToken = '';
 
   // 1. Health check
-  console.log('[Test 1] Kiểm tra Health Check:');
+  console.log('[Test 1] Kiểm tra Health Check: - test-api.js:43');
   const health = await request('/api/health');
   assert(health.status === 200 && health.data.status === 'ok', 'API Server đang phản hồi trạng thái OK');
 
   // 2. Admin Login
-  console.log('\n[Test 2] Đăng nhập Quản trị viên (admin@foodhub.vn):');
+  console.log('\n[Test 2] Đăng nhập Quản trị viên (admin@foodhub.vn): - test-api.js:48');
   const adminLogin = await request('/api/auth/login', {
     method: 'POST',
     body: { email: 'admin@foodhub.vn', password: 'Admin@FoodHub2026!' }
@@ -56,7 +56,7 @@ async function runTests() {
   adminToken = adminLogin.data.data?.token;
 
   // 3. Customer Login
-  console.log('\n[Test 3] Đăng nhập Khách hàng (khachhang@foodhub.vn):');
+  console.log('\n[Test 3] Đăng nhập Khách hàng (khachhang@foodhub.vn): - test-api.js:59');
   const custLogin = await request('/api/auth/login', {
     method: 'POST',
     body: { email: 'khachhang@foodhub.vn', password: 'Khach@FoodHub2026!' }
@@ -66,7 +66,7 @@ async function runTests() {
   customerToken = custLogin.data.data?.token;
 
   // 4. Invalid Password check
-  console.log('\n[Test 4] Kiểm tra bảo mật khi nhập sai mật khẩu:');
+  console.log('\n[Test 4] Kiểm tra bảo mật khi nhập sai mật khẩu: - test-api.js:69');
   const failLogin = await request('/api/auth/login', {
     method: 'POST',
     body: { email: 'admin@foodhub.vn', password: 'WrongPassword123' }
@@ -74,21 +74,21 @@ async function runTests() {
   assert(failLogin.status === 401 && !failLogin.data.success, 'Bị chặn với mã lỗi 401 khi sai mật khẩu');
 
   // 5. Auth /me endpoint
-  console.log('\n[Test 5] Xác thực Token cá nhân (/api/auth/me):');
+  console.log('\n[Test 5] Xác thực Token cá nhân (/api/auth/me): - test-api.js:77');
   const me = await request('/api/auth/me', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(me.status === 200 && me.data.data.email === 'khachhang@foodhub.vn', 'Thông tin phiên làm việc chính xác');
 
   // 6. Security guard: Customer accessing Admin route
-  console.log('\n[Test 6] Kiểm tra hàng rào phân quyền (Customer truy cập Admin route):');
+  console.log('\n[Test 6] Kiểm tra hàng rào phân quyền (Customer truy cập Admin route): - test-api.js:84');
   const forbiddenAdmin = await request('/api/admin/stats', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(forbiddenAdmin.status === 403, 'Bị từ chối với mã 403 Forbidden khi không có quyền Admin');
 
   // 7. Admin stats
-  console.log('\n[Test 7] Quản trị viên lấy số liệu thống kê Dashboard (/api/admin/stats):');
+  console.log('\n[Test 7] Quản trị viên lấy số liệu thống kê Dashboard (/api/admin/stats): - test-api.js:91');
   const stats = await request('/api/admin/stats', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
@@ -97,24 +97,24 @@ async function runTests() {
   assert(stats.data.data.totalUsers >= 2, `Số lượng người dùng thực tế: ${stats.data.data.totalUsers}`);
 
   // 8. Categories list
-  console.log('\n[Test 8] Lấy danh mục món ăn kèm số lượng quán (/api/categories):');
+  console.log('\n[Test 8] Lấy danh mục món ăn kèm số lượng quán (/api/categories): - test-api.js:100');
   const categories = await request('/api/categories');
   assert(categories.status === 200 && Array.isArray(categories.data.data), 'Danh mục trả về dạng mảng');
   assert(categories.data.data.length > 0, `Tìm thấy ${categories.data.data.length} danh mục ẩm thực`);
 
   // 9. Restaurants search & filter
-  console.log('\n[Test 9] Khám phá & lọc danh sách quán ăn (/api/restaurants):');
+  console.log('\n[Test 9] Khám phá & lọc danh sách quán ăn (/api/restaurants): - test-api.js:106');
   const rests = await request('/api/restaurants?limit=6');
   assert(rests.status === 200 && rests.data.data.length > 0, `Lấy thành công ${rests.data.data.length} quán ăn`);
 
   // 10. Restaurant detail
-  console.log('\n[Test 10] Xem chi tiết quán ăn (/api/restaurants/1):');
+  console.log('\n[Test 10] Xem chi tiết quán ăn (/api/restaurants/1): - test-api.js:111');
   const restDetail = await request('/api/restaurants/1');
   assert(restDetail.status === 200 && restDetail.data.data.id === 1, `Chi tiết quán: "${restDetail.data.data.name}"`);
   assert(Array.isArray(restDetail.data.data.reviews), 'Danh sách nhận xét kèm theo quán ăn');
 
   // 11. Customer submit review & auto rating recalc
-  console.log('\n[Test 11] Khách gửi đánh giá và tính lại điểm tự động (/api/reviews):');
+  console.log('\n[Test 11] Khách gửi đánh giá và tính lại điểm tự động (/api/reviews): - test-api.js:117');
   const testReview = await request('/api/reviews', {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` },
@@ -127,7 +127,7 @@ async function runTests() {
   assert(testReview.status === 200 || testReview.status === 201, 'Gửi/cập nhật đánh giá thành công');
 
   // 12. Favorite Toggle
-  console.log('\n[Test 12] Bật/tắt yêu thích quán ăn (/api/favorites/toggle):');
+  console.log('\n[Test 12] Bật/tắt yêu thích quán ăn (/api/favorites/toggle): - test-api.js:130');
   const favToggle = await request('/api/favorites/toggle', {
     method: 'POST',
     headers: { Authorization: `Bearer ${customerToken}` },
@@ -136,14 +136,14 @@ async function runTests() {
   assert(favToggle.status === 200 && typeof favToggle.data.isFavorite === 'boolean', `Trạng thái yêu thích: ${favToggle.data.isFavorite}`);
 
   // 13. Get user favorites
-  console.log('\n[Test 13] Lấy danh sách quán ăn yêu thích của tài khoản (/api/favorites):');
+  console.log('\n[Test 13] Lấy danh sách quán ăn yêu thích của tài khoản (/api/favorites): - test-api.js:139');
   const myFavs = await request('/api/favorites', {
     headers: { Authorization: `Bearer ${customerToken}` }
   });
   assert(myFavs.status === 200 && Array.isArray(myFavs.data.data), `Số quán trong danh sách yêu thích: ${myFavs.data.data.length}`);
 
   // 14. Admin User Management
-  console.log('\n[Test 14] Quản trị viên tra cứu danh sách người dùng (/api/admin/users):');
+  console.log('\n[Test 14] Quản trị viên tra cứu danh sách người dùng (/api/admin/users): - test-api.js:146');
   const usersList = await request('/api/admin/users', {
     headers: { Authorization: `Bearer ${adminToken}` }
   });
@@ -152,22 +152,23 @@ async function runTests() {
   assert(!hasPlainPassword, 'Bảo mật: Không lộ mật khẩu hay mã băm mật khẩu trong dữ liệu trả về');
 
   // 15. Fallback 404 check
-  console.log('\n[Test 15] Kiểm tra đường dẫn không tồn tại (/api/duong-dan-khong-ton-tai):');
+  console.log('\n[Test 15] Kiểm tra đường dẫn không tồn tại (/api/duongdankhongtontai): - test-api.js:155');
   const notFound = await request('/api/duong-dan-khong-ton-tai');
   assert(notFound.status === 404, 'Trả về mã 404 chuẩn cho route không tồn tại');
 
-  console.log('\n========================================================');
-  console.log(`KẾT QUẢ: ĐÃ ĐẠT ${passed}/${passed + failed} TEST CASES.`);
+  console.log('\n======================================================== - test-api.js:159');
+  console.log(`KẾT QUẢ: ĐÃ ĐẠT ${passed}/${passed + failed} TEST CASES. - test-api.js:160`);
   if (failed === 0) {
-    console.log('TẤT CẢ CÁC API ENDPOINTS VÀ BẢO MẬT ĐỀU ĐẠT CHUẨN 100%!');
+    console.log('TẤT CẢ CÁC API ENDPOINTS VÀ BẢO MẬT ĐỀU ĐẠT CHUẨN 100%! - test-api.js:162');
   } else {
-    console.error(`Có ${failed} test cases thất bại.`);
+    console.error(`Có ${failed} test cases thất bại. - test-api.js:164`);
     process.exit(1);
   }
-  console.log('========================================================\n');
+  console.log('========================================================\n - test-api.js:167');
 }
 
 runTests().catch(err => {
-  console.error('Lỗi khi chạy bộ kiểm thử API:', err);
+  console.error('Lỗi khi chạy bộ kiểm thử API: - test-api.js:171', err);
   process.exit(1);
 });
+

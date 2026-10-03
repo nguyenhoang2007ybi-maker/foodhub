@@ -142,3 +142,4 @@ export function createRestaurantCard(restaurant, favoriteIds = []) {
 
   return card;
 }
+

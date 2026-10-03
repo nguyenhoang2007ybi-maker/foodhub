@@ -400,7 +400,7 @@
       "status": "approved",
       "date": "2026-10-03",
       "createdAt": "2026-09-25T01:30:00.000Z",
-      "updatedAt": "2026-10-03T16:25:24.323Z"
+      "updatedAt": "2026-10-03T17:12:44.380Z"
     },
     {
       "id": 2,
@@ -492,7 +492,7 @@
       "id": 3,
       "userId": 2,
       "restaurantId": 1,
-      "createdAt": "2026-10-03T16:25:24.347Z"
+      "createdAt": "2026-10-03T17:12:44.388Z"
     }
   ],
   "settings": {
