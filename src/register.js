@@ -84,7 +84,8 @@ document.addEventListener('DOMContentLoaded', () => {
           name,
           email,
           phone,
-          password
+          password,
+          confirmPassword
         });
 
         if (res && res.success && res.token && res.user) {

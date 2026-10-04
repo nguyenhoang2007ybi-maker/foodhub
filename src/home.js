@@ -202,3 +202,4 @@ function applySorting(type) {
   }
   renderFilteredRestaurants();
 }
+

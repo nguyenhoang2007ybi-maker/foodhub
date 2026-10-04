@@ -32,9 +32,53 @@
       "status": "active",
       "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
       "createdAt": "2026-03-10T00:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "name": "PH 6 5 9 1 4 LY HUY HOANG -",
+      "email": "lyhoang230607@gmail.com",
+      "phone": "0942994855",
+      "passwordHash": "$2b$10$dLHKTQRMbBrPgdwAiewS1erEcxclqNCslCEWGUtG5XB1zpLN.L7qu",
+      "role": "customer",
+      "status": "blocked",
+      "avatar": "https://ui-avatars.com/api/?name=PH%206%205%209%201%204%20LY%20HUY%20HOANG%20-&background=ff6b35&color=fff",
+      "createdAt": "2026-10-04T10:44:24.044Z",
+      "updatedAt": "2026-10-04T11:24:37.040Z"
+    },
+    {
+      "id": 5,
+      "name": "Bui Tuan Cuong",
+      "email": "dsandlsadjlsa@gmail.com",
+      "phone": "0123456789",
+      "passwordHash": "$2b$10$888VjabHnr7.E0ActzHKhOx9LtQcX6QT0x3zQ7V4YvI03s9R6.GyS",
+      "role": "customer",
+      "status": "blocked",
+      "avatar": "https://ui-avatars.com/api/?name=Bui%20Tuan%20Cuong&background=ff6b35&color=fff",
+      "createdAt": "2026-10-04T12:02:02.308Z",
+      "updatedAt": "2026-10-04T12:02:43.764Z"
     }
   ],
   "restaurants": [
+    {
+      "id": 9,
+      "name": "huyhoang",
+      "category": "Đồ uống",
+      "address": "48 phú kiều -kiều mai-bắc từ liêm",
+      "area": "phú diễn",
+      "price": "50.000đ - 100.000đ",
+      "minPrice": 50000,
+      "maxPrice": 100000,
+      "image": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
+      "gallery": [],
+      "description": "",
+      "openingHours": "07:00 - 22:00",
+      "phone": "0901234567",
+      "rating": 5,
+      "reviewsCount": 0,
+      "menu": [],
+      "featured": false,
+      "createdAt": "2026-10-04T05:37:41.597Z"
+    },
     {
       "id": 1,
       "name": "Phở Thìn Lò Đúc",
@@ -52,8 +96,8 @@
       "description": "Phở Thìn Lò Đúc nổi tiếng hơn 40 năm với món phở bò tái lăn nước dùng béo ngậy, thịt bò xào lửa lớn cùng nhiều hành lá tươi ngọt thanh.",
       "openingHours": "06:00 - 21:00",
       "phone": "024 3821 2709",
-      "rating": 4.8,
-      "reviewsCount": 2,
+      "rating": 4.5,
+      "reviewsCount": 1,
       "featured": true,
       "menu": [
         {
@@ -394,13 +438,13 @@
       "userId": 2,
       "userName": "Nguyễn Văn A",
       "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
-      "rating": 5,
-      "content": "Món ăn tại đây cực kỳ xuất sắc, phục vụ chu đáo tận tình!",
+      "rating": 1,
+      "content": "kfkdsfdsnfds",
       "images": [],
-      "status": "approved",
-      "date": "2026-10-03",
+      "status": "hidden",
+      "date": "2026-10-04",
       "createdAt": "2026-09-25T01:30:00.000Z",
-      "updatedAt": "2026-10-03T17:28:24.527Z"
+      "updatedAt": "2026-10-04T11:24:49.062Z"
     },
     {
       "id": 2,
@@ -487,6 +531,36 @@
       "userId": 2,
       "restaurantId": 4,
       "createdAt": "2026-10-03T12:02:44.176Z"
+    },
+    {
+      "id": 3,
+      "userId": 2,
+      "restaurantId": 1,
+      "createdAt": "2026-10-04T05:42:41.667Z"
+    },
+    {
+      "id": 4,
+      "userId": 2,
+      "restaurantId": 9,
+      "createdAt": "2026-10-04T05:43:14.897Z"
+    },
+    {
+      "id": 5,
+      "userId": 5,
+      "restaurantId": 9,
+      "createdAt": "2026-10-04T12:02:18.063Z"
+    },
+    {
+      "id": 6,
+      "userId": 5,
+      "restaurantId": 1,
+      "createdAt": "2026-10-04T12:02:19.795Z"
+    },
+    {
+      "id": 7,
+      "userId": 5,
+      "restaurantId": 2,
+      "createdAt": "2026-10-04T12:02:20.678Z"
     }
   ],
   "settings": {

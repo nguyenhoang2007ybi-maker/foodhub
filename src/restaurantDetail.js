@@ -17,18 +17,82 @@ const starLabels = {
   5: '5 sao - Tuyệt vời'
 };
 
+function showSkeleton() {
+  const skeleton = document.getElementById('detail-skeleton');
+  const content = document.getElementById('detail-content');
+  const errorBox = document.getElementById('detail-error');
+  if (skeleton) skeleton.classList.remove('hidden');
+  if (errorBox) errorBox.classList.add('hidden');
+  if (content) content.classList.add('hidden');
+}
+
+function showContent() {
+  const skeleton = document.getElementById('detail-skeleton');
+  const content = document.getElementById('detail-content');
+  const errorBox = document.getElementById('detail-error');
+  if (skeleton) skeleton.classList.add('hidden');
+  if (errorBox) errorBox.classList.add('hidden');
+  if (content) content.classList.remove('hidden');
+}
+
+// Thoát khỏi trạng thái loading và hiển thị thông báo lỗi rõ ràng.
+// Không dùng dữ liệu giả — chỉ hiện thông tin lỗi thật từ API.
+function showErrorState({ title, message, icon = 'cloud_off' }) {
+  const skeleton = document.getElementById('detail-skeleton');
+  const content = document.getElementById('detail-content');
+  const errorBox = document.getElementById('detail-error');
+
+  if (skeleton) skeleton.classList.add('hidden');
+  if (content) content.classList.add('hidden');
+
+  if (!errorBox) {
+    toast.error(message || title);
+    return;
+  }
+
+  const titleEl = document.getElementById('detail-error-title');
+  const msgEl = document.getElementById('detail-error-message');
+  const iconEl = document.querySelector('#detail-error-icon .material-symbols-outlined');
+
+  if (titleEl) titleEl.textContent = title;
+  if (msgEl) msgEl.textContent = message;
+  if (iconEl) iconEl.textContent = icon;
+  errorBox.classList.remove('hidden');
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   initHeader('');
   initFooter();
 
   const urlParams = new URLSearchParams(window.location.search);
-  const restId = urlParams.get('id');
+  const rawId = urlParams.get('id');
+  const restId = rawId !== null && /^\d+$/.test(rawId.trim()) ? Number(rawId.trim()) : NaN;
 
-  if (!restId) {
-    toast.error('Không tìm thấy mã quán ăn.');
-    setTimeout(() => window.location.href = '/explore.html', 1000);
+  const retryBtn = document.getElementById('detail-retry-btn');
+  if (retryBtn) {
+    retryBtn.addEventListener('click', () => {
+      if (!Number.isInteger(restId)) {
+        window.location.href = '/explore.html';
+        return;
+      }
+      initPage(restId);
+    });
+  }
+
+  if (!Number.isInteger(restId) || restId <= 0) {
+    showErrorState({
+      title: 'Đường dẫn không hợp lệ',
+      message: 'Không tìm thấy mã quán ăn trong đường dẫn. Vui lòng chọn một quán từ trang Khám phá.',
+      icon: 'link_off'
+    });
     return;
   }
+
+  await initPage(restId);
+});
+
+async function initPage(restId) {
+  showSkeleton();
 
   // Load user favorites
   if (isLoggedIn()) {
@@ -43,20 +107,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  await loadRestaurantDetail(restId);
-  setupReviewModal(restId);
-});
+  const loaded = await loadRestaurantDetail(restId);
+  if (loaded) {
+    setupReviewModal(restId);
+  }
+}
 
 async function loadRestaurantDetail(id) {
-  const skeleton = document.getElementById('detail-skeleton');
-  const content = document.getElementById('detail-content');
-
   try {
     const res = await api.get(`/restaurants/${id}`);
     if (!res || !res.success || !res.data) {
-      toast.error('Quán ăn không tồn tại hoặc đã bị xóa.');
-      setTimeout(() => window.location.href = '/explore.html', 1500);
-      return;
+      showErrorState({
+        title: 'Quán ăn không tồn tại',
+        message: (res && res.message) || 'Quán ăn này không tồn tại hoặc đã bị xóa.',
+        icon: 'search_off'
+      });
+      return false;
     }
 
     currentRestaurant = res.data;
@@ -135,12 +201,34 @@ async function loadRestaurantDetail(id) {
     renderRelated(currentRestaurant.related);
 
     // Show Content
-    if (skeleton) skeleton.classList.add('hidden');
-    if (content) content.classList.remove('hidden');
+    showContent();
+    return true;
 
   } catch (err) {
     console.error('Lỗi khi tải chi tiết quán ăn:', err);
-    toast.error('Không thể nạp thông tin quán ăn.');
+
+    const status = err && typeof err.status === 'number' ? err.status : 0;
+
+    if (status === 404) {
+      showErrorState({
+        title: 'Quán ăn không tồn tại',
+        message: err.message || 'Không tìm thấy thông tin quán ăn.',
+        icon: 'search_off'
+      });
+    } else if (status === 0) {
+      showErrorState({
+        title: 'Không kết nối được máy chủ',
+        message: 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra backend có đang chạy ở cổng 3000 không.',
+        icon: 'wifi_off'
+      });
+    } else {
+      showErrorState({
+        title: 'Không tải được thông tin quán ăn',
+        message: err.message || `Đã xảy ra lỗi khi tải dữ liệu (Mã: ${status}). Vui lòng thử lại.`,
+        icon: 'error'
+      });
+    }
+    return false;
   }
 }
 
