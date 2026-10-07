@@ -17,6 +17,19 @@ const starLabels = {
   5: '5 sao - Tuyệt vời'
 };
 
+// Hiển thị giờ mở cửa: ưu tiên dữ liệu mới (openingTime/closingTime/open24),
+// fallback về openingHours của dữ liệu cũ để không làm mất thông tin quán ăn cũ.
+function formatOpeningHours(restaurant) {
+  if (!restaurant) return '06:00 - 22:00';
+  if (restaurant.open24 === true || /24\s*\/\s*24/i.test(String(restaurant.openingHours || ''))) {
+    return 'Mở cửa 24/24';
+  }
+  if (restaurant.openingTime && restaurant.closingTime) {
+    return `${restaurant.openingTime} - ${restaurant.closingTime}`;
+  }
+  return restaurant.openingHours || '06:00 - 22:00';
+}
+
 function showSkeleton() {
   const skeleton = document.getElementById('detail-skeleton');
   const content = document.getElementById('detail-content');
@@ -158,7 +171,7 @@ async function loadRestaurantDetail(id) {
     if (priceEl) priceEl.textContent = currentRestaurant.price || '30.000đ - 100.000đ';
 
     const hoursEl = document.getElementById('rest-hours');
-    if (hoursEl) hoursEl.textContent = currentRestaurant.openingHours || '06:00 - 22:00';
+    if (hoursEl) hoursEl.textContent = formatOpeningHours(currentRestaurant);
 
     const phoneEl = document.getElementById('rest-phone');
     if (phoneEl) phoneEl.textContent = currentRestaurant.phone || '0901234567';

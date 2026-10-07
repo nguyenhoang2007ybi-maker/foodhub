@@ -6,6 +6,72 @@ import { requireAdmin, getUser, logout } from './auth.js';
 let cachedCategories = [];
 let cachedRestaurants = [];
 
+// Trạng thái chỉnh sửa giờ trong phiên mở modal
+let hoursTouched = false;
+// true nếu quán cũ có openingHours nhiều khung giờ (không thể biểu diễn bằng 2 dropdown)
+let keepLegacyHours = false;
+
+const HANOI_AREAS = [
+  'Cầu Giấy', 'Dịch Vọng', 'Dịch Vọng Hậu', 'Yên Hòa', 'Trung Hòa',
+  'Mỹ Đình', 'Nam Từ Liêm', 'Bắc Từ Liêm', 'Thanh Xuân', 'Đống Đa',
+  'Ba Đình', 'Hoàn Kiếm', 'Hai Bà Trưng', 'Hà Đông', 'Long Biên',
+  'Tây Hồ', 'Hoàng Mai', 'Gia Lâm', 'Đông Anh', 'Sóc Sơn'
+];
+
+const TIME_SLOTS = (() => {
+  const slots = [];
+  for (let h = 0; h < 24; h++) {
+    slots.push(`${String(h).padStart(2, '0')}:00`);
+    slots.push(`${String(h).padStart(2, '0')}:30`);
+  }
+  return slots;
+})();
+
+const DEFAULT_OPEN_TIME = '07:00';
+const DEFAULT_CLOSE_TIME = '22:00';
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// Chuẩn hóa chuỗi giờ về định dạng HH:MM hợp lệ (bước 30 phút), trả về null nếu không hợp lệ
+function normalizeTime(value) {
+  if (!value || typeof value !== 'string') return null;
+  const m = value.trim().match(/^(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const h = parseInt(m[1], 10);
+  const min = parseInt(m[2], 10);
+  if (h < 0 || h > 23 || min < 0 || min > 59) return null;
+  return `${String(h).padStart(2, '0')}:${min >= 30 ? '30' : '00'}`;
+}
+
+// Đọc giờ mở/đóng cửa từ dữ liệu mới (openingTime/closingTime) hoặc dữ liệu cũ (openingHours)
+function parseOpeningHours(restaurant) {
+  if (!restaurant) return null;
+
+  const open = normalizeTime(restaurant.openingTime);
+  const close = normalizeTime(restaurant.closingTime);
+  if (open && close) return { open, close };
+
+  const match = String(restaurant.openingHours || '').match(/(\d{1,2}:\d{2})\s*[-–]\s*(\d{1,2}:\d{2})/);
+  if (match) {
+    const o = normalizeTime(match[1]);
+    const c = normalizeTime(match[2]);
+    if (o && c) return { open: o, close: c };
+  }
+  return null;
+}
+
+function is24Hours(restaurant) {
+  if (!restaurant) return false;
+  return restaurant.open24 === true || /24\s*\/\s*24/i.test(String(restaurant.openingHours || ''));
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
   if (!requireAdmin()) return;
 
@@ -272,6 +338,149 @@ function renderRestaurantsTable(list) {
   });
 }
 
+function populateTimeSelects() {
+  const openSel = document.getElementById('modal-rest-open-time');
+  const closeSel = document.getElementById('modal-rest-close-time');
+  if (!openSel || !closeSel) return;
+
+  const options = TIME_SLOTS.map(t => `<option value="${t}">${t}</option>`).join('');
+  openSel.innerHTML = options;
+  closeSel.innerHTML = `<option value="">-- Chọn giờ đóng cửa --</option>${options}`;
+}
+
+function syncPresetWithTimes() {
+  const presetSel = document.getElementById('modal-rest-hours-preset');
+  const openSel = document.getElementById('modal-rest-open-time');
+  const closeSel = document.getElementById('modal-rest-close-time');
+  if (!presetSel || !openSel || !closeSel) return;
+
+  closeSel.disabled = false;
+  const key = `${openSel.value}-${closeSel.value}`;
+  const matched = Array.from(presetSel.options).some(o => o.value === key && o.value !== '');
+  presetSel.value = matched ? key : '';
+}
+
+function setupHoursControls() {
+  const presetSel = document.getElementById('modal-rest-hours-preset');
+  const openSel = document.getElementById('modal-rest-open-time');
+  const closeSel = document.getElementById('modal-rest-close-time');
+  if (!presetSel || !openSel || !closeSel) return;
+
+  presetSel.onchange = () => {
+    hoursTouched = true;
+    const value = presetSel.value;
+    if (value === '24') {
+      openSel.value = '00:00';
+      closeSel.value = '';
+      closeSel.disabled = true;
+      return;
+    }
+    closeSel.disabled = false;
+    if (value && value.includes('-')) {
+      const [open, close] = value.split('-');
+      openSel.value = open;
+      closeSel.value = close;
+    }
+  };
+
+  openSel.onchange = () => { hoursTouched = true; syncPresetWithTimes(); };
+  closeSel.onchange = () => { hoursTouched = true; syncPresetWithTimes(); };
+}
+
+function applyHoursToForm(restaurant = null) {
+  const presetSel = document.getElementById('modal-rest-hours-preset');
+  const openSel = document.getElementById('modal-rest-open-time');
+  const closeSel = document.getElementById('modal-rest-close-time');
+  const hint = document.getElementById('modal-rest-hours-hint');
+  if (!presetSel || !openSel || !closeSel) return;
+
+  keepLegacyHours = false;
+  if (hint) {
+    hint.classList.add('hidden');
+    hint.textContent = '';
+  }
+
+  closeSel.disabled = false;
+  presetSel.value = '';
+  openSel.value = DEFAULT_OPEN_TIME;
+  closeSel.value = DEFAULT_CLOSE_TIME;
+
+  if (!restaurant) return;
+
+  if (is24Hours(restaurant)) {
+    openSel.value = '00:00';
+    closeSel.value = '';
+    closeSel.disabled = true;
+    presetSel.value = '24';
+    return;
+  }
+
+  const parsed = parseOpeningHours(restaurant);
+  if (parsed) {
+    if (TIME_SLOTS.includes(parsed.open)) openSel.value = parsed.open;
+    if (TIME_SLOTS.includes(parsed.close)) closeSel.value = parsed.close;
+  }
+
+  const key = `${openSel.value}-${closeSel.value}`;
+  if (Array.from(presetSel.options).some(o => o.value === key && o.value !== '')) {
+    presetSel.value = key;
+  }
+
+  // Quán cũ có openingHours nhiều khung giờ (vd: "06:00 - 10:00 & 18:00 - 20:30"):
+  // giữ nguyên chuỗi cũ nếu Admin không chủ động đổi giờ.
+  const legacy = String(restaurant.openingHours || '').trim();
+  const isSimpleRange = /^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/.test(legacy);
+  if (legacy && !restaurant.openingTime && !isSimpleRange) {
+    keepLegacyHours = true;
+    if (hint) {
+      hint.textContent = `Dữ liệu cũ đang lưu: "${legacy}". Nếu bạn không đổi giờ ở trên, chuỗi giờ này sẽ được giữ nguyên.`;
+      hint.classList.remove('hidden');
+    }
+  }
+}
+
+function setupAreaCombobox() {
+  const input = document.getElementById('modal-rest-area');
+  const list = document.getElementById('modal-rest-area-list');
+  if (!input || !list) return;
+
+  const hide = () => {
+    list.classList.add('hidden');
+    input.setAttribute('aria-expanded', 'false');
+  };
+
+  const render = () => {
+    const keyword = input.value.trim().toLowerCase();
+    const matches = HANOI_AREAS.filter(a => !keyword || a.toLowerCase().includes(keyword));
+    const current = input.value.trim();
+
+    if (current && !HANOI_AREAS.some(a => a.toLowerCase() === current.toLowerCase()) &&
+        (!keyword || current.toLowerCase().includes(keyword))) {
+      matches.unshift(current);
+    }
+
+    list.innerHTML = matches.length
+      ? matches.map(a => `<button type="button" class="area-option w-full text-left px-3 py-2 rounded-lg text-xs text-on-surface hover:bg-surface-container-low transition-colors" data-area="${escapeHtml(a)}">${escapeHtml(a)}</button>`).join('')
+      : `<div class="px-3 py-2 text-[11px] text-secondary">Không tìm thấy khu vực phù hợp</div>`;
+
+    list.classList.remove('hidden');
+    input.setAttribute('aria-expanded', 'true');
+  };
+
+  input.onfocus = render;
+  input.oninput = render;
+  input.onblur = () => setTimeout(hide, 120);
+  input.onkeydown = (e) => { if (e.key === 'Escape') hide(); };
+
+  list.onmousedown = (e) => {
+    const option = e.target.closest('.area-option');
+    if (!option) return;
+    e.preventDefault();
+    input.value = option.dataset.area || '';
+    hide();
+  };
+}
+
 function openRestaurantModal(restaurant = null) {
   const modal = document.getElementById('rest-modal');
   const title = document.getElementById('rest-modal-title');
@@ -281,10 +490,14 @@ function openRestaurantModal(restaurant = null) {
   const addrInput = document.getElementById('modal-rest-address');
   const areaInput = document.getElementById('modal-rest-area');
   const priceInput = document.getElementById('modal-rest-price');
-  const hoursInput = document.getElementById('modal-rest-hours');
   const phoneInput = document.getElementById('modal-rest-phone');
   const imgInput = document.getElementById('modal-rest-image');
   const descInput = document.getElementById('modal-rest-desc');
+
+  populateTimeSelects();
+  setupHoursControls();
+  setupAreaCombobox();
+  hoursTouched = false;
 
   if (restaurant) {
     title.textContent = `Chỉnh sửa: ${restaurant.name}`;
@@ -294,21 +507,22 @@ function openRestaurantModal(restaurant = null) {
     addrInput.value = restaurant.address || '';
     areaInput.value = restaurant.area || '';
     priceInput.value = restaurant.price || '';
-    hoursInput.value = restaurant.openingHours || '';
     phoneInput.value = restaurant.phone || '';
     imgInput.value = restaurant.image || '';
     descInput.value = restaurant.description || '';
+    applyHoursToForm(restaurant);
   } else {
     title.textContent = 'Thêm Quán Ăn Mới';
     idInput.value = '';
     nameInput.value = '';
+    if (catInput && catInput.options.length) catInput.selectedIndex = 0;
     addrInput.value = '';
     areaInput.value = 'Hoàn Kiếm';
     priceInput.value = '50.000đ - 100.000đ';
-    hoursInput.value = '07:00 - 22:00';
     phoneInput.value = '0901234567';
     imgInput.value = 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80';
     descInput.value = '';
+    applyHoursToForm(null);
   }
 
   modal.classList.remove('hidden');
@@ -328,17 +542,43 @@ function setupRestaurantModalEvents() {
     form.onsubmit = async (e) => {
       e.preventDefault();
       const id = document.getElementById('modal-rest-id').value;
+
+      const openTime = document.getElementById('modal-rest-open-time').value;
+      const closeTime = document.getElementById('modal-rest-close-time').value;
+      const presetValue = document.getElementById('modal-rest-hours-preset').value;
+      const open24 = presetValue === '24';
+
+      // Quán cũ có nhiều khung giờ và Admin không đổi giờ -> giữ nguyên openingHours cũ
+      const preserveLegacyHours = keepLegacyHours && !hoursTouched;
+
+      if (!preserveLegacyHours) {
+        if (!open24 && !closeTime) {
+          toast.error('Vui lòng chọn giờ đóng cửa hoặc chọn "Mở cửa 24/24".');
+          return;
+        }
+        if (!open24 && closeTime === openTime) {
+          toast.error('Giờ đóng cửa phải khác giờ mở cửa.');
+          return;
+        }
+      }
+
       const payload = {
         name: document.getElementById('modal-rest-name').value.trim(),
         category: document.getElementById('modal-rest-category').value,
         address: document.getElementById('modal-rest-address').value.trim(),
         area: document.getElementById('modal-rest-area').value.trim(),
         price: document.getElementById('modal-rest-price').value.trim(),
-        openingHours: document.getElementById('modal-rest-hours').value.trim(),
         phone: document.getElementById('modal-rest-phone').value.trim(),
         image: document.getElementById('modal-rest-image').value.trim(),
         description: document.getElementById('modal-rest-desc').value.trim()
       };
+
+      if (!preserveLegacyHours) {
+        payload.openingTime = open24 ? '00:00' : openTime;
+        payload.closingTime = open24 ? null : closeTime;
+        payload.open24 = open24;
+        payload.openingHours = open24 ? 'Mở cửa 24/24' : `${openTime} - ${closeTime}`;
+      }
 
       try {
         let res;
@@ -505,11 +745,11 @@ function renderUsersTable(users) {
         </select>
       </td>
       <td class="p-4 text-right">
-        ${!isMe ? `
+        ${isMe ? '<span class="text-secondary text-[11px]">Đang đăng nhập</span>' : (u.role === 'admin' ? `
           <button class="del-user-btn text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition-colors" data-id="${u.id}" title="Xóa tài khoản">
             <span class="material-symbols-outlined text-[18px]">delete</span>
           </button>
-        ` : '<span class="text-secondary text-[11px]">Đang đăng nhập</span>'}
+        ` : '<span class="text-secondary text-[11px]">Không thể xóa</span>')}
       </td>
     `;
 
@@ -541,19 +781,23 @@ function renderUsersTable(users) {
       };
     }
 
-    // Delete user
+    // Delete user (chỉ dành cho tài khoản quản trị viên, KHÔNG cho xóa tài khoản khách hàng)
     const delBtn = tr.querySelector('.del-user-btn');
     if (delBtn) {
       delBtn.onclick = async () => {
-        if (!confirm(`Bạn có chắc muốn xóa tài khoản "${u.name}" (${u.email})?`)) return;
-        try {
-          const res = await api.delete(`/admin/users/${u.id}`);
-          if (res && res.success) {
-            toast.success('Đã xóa tài khoản.');
-            loadUsersManager();
+        if (!isMe && u.role === 'admin') {
+          if (!confirm(`Bạn có chắc muốn xóa tài khoản "${u.name}" (${u.email})?`)) return;
+          try {
+            const res = await api.delete(`/admin/users/${u.id}`);
+            if (res && res.success) {
+              toast.success('Đã xóa tài khoản.');
+              loadUsersManager();
+            }
+          } catch (err) {
+            toast.error(err.message || 'Lỗi khi xóa người dùng.');
           }
-        } catch (err) {
-          toast.error(err.message || 'Lỗi khi xóa người dùng.');
+        } else {
+          toast.error('Không thể xóa tài khoản khách hàng.');
         }
       };
     }

@@ -196,6 +196,16 @@ router.delete('/users/:id', (req, res) => {
     return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản.' });
   }
 
+  const user = db.users[index];
+
+  // Chính sách hệ thống: Admin KHÔNG được xóa tài khoản khách hàng
+  if (user.role !== 'admin') {
+    return res.status(403).json({
+      success: false,
+      message: 'Không thể xóa tài khoản khách hàng. Hãy dùng trạng thái "Đã bị khóa" thay thế.'
+    });
+  }
+
   // Không cho tự xóa chính mình
   if (userId === req.user.id) {
     return res.status(400).json({
@@ -205,15 +215,12 @@ router.delete('/users/:id', (req, res) => {
   }
 
   // Không cho xóa admin cuối cùng
-  const user = db.users[index];
-  if (user.role === 'admin') {
-    const adminCount = db.users.filter(u => u.role === 'admin').length;
-    if (adminCount <= 1) {
-      return res.status(400).json({
-        success: false,
-        message: 'Không thể xóa tài khoản Quản trị viên cuối cùng trong hệ thống.'
-      });
-    }
+  const adminCount = db.users.filter(u => u.role === 'admin').length;
+  if (adminCount <= 1) {
+    return res.status(400).json({
+      success: false,
+      message: 'Không thể xóa tài khoản Quản trị viên cuối cùng trong hệ thống.'
+    });
   }
 
   db.users.splice(index, 1);

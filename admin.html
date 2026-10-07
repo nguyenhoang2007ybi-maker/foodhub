@@ -335,7 +335,11 @@
 
           <div>
             <label class="block text-xs font-bold text-on-surface mb-1">Khu vực / Quận (*):</label>
-            <input id="modal-rest-area" type="text" required placeholder="Hoàn Kiếm, Hai Bà Trưng..." class="w-full h-10 px-3 bg-surface-container-low border border-surface-container rounded-xl text-xs focus:outline-none focus:border-primary-container" />
+            <div class="relative">
+              <input id="modal-rest-area" type="text" required autocomplete="off" role="combobox" aria-expanded="false" aria-controls="modal-rest-area-list" placeholder="Chọn hoặc gõ để tìm khu vực..." class="w-full h-10 px-3 pr-9 bg-surface-container-low border border-surface-container rounded-xl text-xs focus:outline-none focus:border-primary-container" />
+              <span class="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-secondary text-[18px] pointer-events-none">arrow_drop_down</span>
+              <div id="modal-rest-area-list" class="hidden absolute z-30 left-0 right-0 top-full mt-1 max-h-52 overflow-y-auto bg-surface-container-lowest border border-surface-container rounded-xl shadow-lg p-1"></div>
+            </div>
           </div>
         </div>
 
@@ -346,15 +350,38 @@
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-on-surface mb-1">Giờ mở cửa:</label>
-            <input id="modal-rest-hours" type="text" placeholder="07:00 - 22:00" class="w-full h-10 px-3 bg-surface-container-low border border-surface-container rounded-xl text-xs focus:outline-none focus:border-primary-container" />
-          </div>
-
-          <div>
             <label class="block text-xs font-bold text-on-surface mb-1">Số điện thoại:</label>
             <input id="modal-rest-phone" type="tel" placeholder="0901234567" class="w-full h-10 px-3 bg-surface-container-low border border-surface-container rounded-xl text-xs focus:outline-none focus:border-primary-container" />
           </div>
+
+          <div>
+            <label class="block text-xs font-bold text-on-surface mb-1">Chọn nhanh khung giờ:</label>
+            <select id="modal-rest-hours-preset" class="w-full h-10 px-3 bg-surface-container-low border border-surface-container rounded-xl text-xs focus:outline-none focus:border-primary-container cursor-pointer">
+              <option value="">-- Tùy chỉnh --</option>
+              <option value="06:00-22:00">06:00 - 22:00</option>
+              <option value="07:00-22:00">07:00 - 22:00</option>
+              <option value="08:00-22:00">08:00 - 22:00</option>
+              <option value="09:00-22:00">09:00 - 22:00</option>
+              <option value="10:00-23:00">10:00 - 23:00</option>
+              <option value="11:00-23:00">11:00 - 23:00</option>
+              <option value="24">Mở cửa 24/24</option>
+            </select>
+          </div>
         </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-xs font-bold text-on-surface mb-1">Giờ mở cửa:</label>
+            <select id="modal-rest-open-time" required class="w-full h-10 px-3 bg-surface-container-low border border-surface-container rounded-xl text-xs focus:outline-none focus:border-primary-container cursor-pointer"></select>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-on-surface mb-1">Giờ đóng cửa:</label>
+            <select id="modal-rest-close-time" class="w-full h-10 px-3 bg-surface-container-low border border-surface-container rounded-xl text-xs focus:outline-none focus:border-primary-container cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"></select>
+          </div>
+        </div>
+        <p class="text-[11px] text-secondary -mt-2">Chọn "Mở cửa 24/24" nếu quán hoạt động cả ngày, khi đó không cần chọn giờ đóng cửa.</p>
+        <p id="modal-rest-hours-hint" class="hidden text-[11px] text-amber-800 bg-amber-50 border border-amber-100 rounded-xl px-3 py-2"></p>
 
         <div>
           <label class="block text-xs font-bold text-on-surface mb-1">Đường dẫn ảnh đại diện (URL):</label>

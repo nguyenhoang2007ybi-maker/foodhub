@@ -38,12 +38,12 @@
       "name": "PH 6 5 9 1 4 LY HUY HOANG -",
       "email": "lyhoang230607@gmail.com",
       "phone": "0942994855",
-      "passwordHash": "$2b$10$dLHKTQRMbBrPgdwAiewS1erEcxclqNCslCEWGUtG5XB1zpLN.L7qu",
+      "passwordHash": "$2b$10$hct8871Lr.QAZ2HR3WasrOFNzt7IJtESoItzX1mCEdJSv7PkEtWsa",
       "role": "customer",
-      "status": "blocked",
+      "status": "active",
       "avatar": "https://ui-avatars.com/api/?name=PH%206%205%209%201%204%20LY%20HUY%20HOANG%20-&background=ff6b35&color=fff",
       "createdAt": "2026-10-04T10:44:24.044Z",
-      "updatedAt": "2026-10-04T11:24:37.040Z"
+      "updatedAt": "2026-10-05T05:26:01.732Z"
     },
     {
       "id": 5,
@@ -52,33 +52,24 @@
       "phone": "0123456789",
       "passwordHash": "$2b$10$888VjabHnr7.E0ActzHKhOx9LtQcX6QT0x3zQ7V4YvI03s9R6.GyS",
       "role": "customer",
-      "status": "blocked",
+      "status": "active",
       "avatar": "https://ui-avatars.com/api/?name=Bui%20Tuan%20Cuong&background=ff6b35&color=fff",
       "createdAt": "2026-10-04T12:02:02.308Z",
-      "updatedAt": "2026-10-04T12:02:43.764Z"
+      "updatedAt": "2026-10-07T05:51:19.548Z"
+    },
+    {
+      "id": 6,
+      "name": "kdnvdgf",
+      "email": "lyhuy230607@gmail.com",
+      "phone": "0123456789",
+      "passwordHash": "$2b$10$wjwn2lZknj/KPy76U8lzZ.fl1cbxHzCNZd02im92fDJkF8QQqodnS",
+      "role": "customer",
+      "status": "active",
+      "avatar": "https://ui-avatars.com/api/?name=kdnvdgf&background=ff6b35&color=fff",
+      "createdAt": "2026-10-05T05:38:29.154Z"
     }
   ],
   "restaurants": [
-    {
-      "id": 9,
-      "name": "huyhoang",
-      "category": "Đồ uống",
-      "address": "48 phú kiều -kiều mai-bắc từ liêm",
-      "area": "phú diễn",
-      "price": "50.000đ - 100.000đ",
-      "minPrice": 50000,
-      "maxPrice": 100000,
-      "image": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
-      "gallery": [],
-      "description": "",
-      "openingHours": "07:00 - 22:00",
-      "phone": "0901234567",
-      "rating": 5,
-      "reviewsCount": 0,
-      "menu": [],
-      "featured": false,
-      "createdAt": "2026-10-04T05:37:41.597Z"
-    },
     {
       "id": 1,
       "name": "Phở Thìn Lò Đúc",
@@ -96,8 +87,8 @@
       "description": "Phở Thìn Lò Đúc nổi tiếng hơn 40 năm với món phở bò tái lăn nước dùng béo ngậy, thịt bò xào lửa lớn cùng nhiều hành lá tươi ngọt thanh.",
       "openingHours": "06:00 - 21:00",
       "phone": "024 3821 2709",
-      "rating": 4.5,
-      "reviewsCount": 1,
+      "rating": 4.8,
+      "reviewsCount": 3,
       "featured": true,
       "menu": [
         {
@@ -141,7 +132,7 @@
       "openingHours": "08:00 - 20:30",
       "phone": "024 3943 4106",
       "rating": 4.8,
-      "reviewsCount": 2,
+      "reviewsCount": 3,
       "featured": true,
       "menu": [
         {
@@ -438,13 +429,13 @@
       "userId": 2,
       "userName": "Nguyễn Văn A",
       "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
-      "rating": 1,
-      "content": "kfkdsfdsnfds",
+      "rating": 5,
+      "content": "ngon dep",
       "images": [],
       "status": "hidden",
-      "date": "2026-10-04",
+      "date": "2026-10-05",
       "createdAt": "2026-09-25T01:30:00.000Z",
-      "updatedAt": "2026-10-04T11:24:49.062Z"
+      "updatedAt": "2026-10-05T05:42:34.985Z"
     },
     {
       "id": 2,
@@ -523,33 +514,50 @@
       "status": "approved",
       "date": "2026-10-03",
       "createdAt": "2026-10-03T08:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "restaurantId": 2,
+      "userId": 4,
+      "userName": "PH 6 5 9 1 4 LY HUY HOANG -",
+      "userAvatar": "https://ui-avatars.com/api/?name=PH%206%205%209%201%204%20LY%20HUY%20HOANG%20-&background=ff6b35&color=fff",
+      "rating": 5,
+      "content": "ngon đẹp",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-05",
+      "createdAt": "2026-10-05T05:28:24.375Z"
+    },
+    {
+      "id": 8,
+      "restaurantId": 1,
+      "userId": 6,
+      "userName": "kdnvdgf",
+      "userAvatar": "https://ui-avatars.com/api/?name=kdnvdgf&background=ff6b35&color=fff",
+      "rating": 5,
+      "content": "ngon dep",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-05",
+      "createdAt": "2026-10-05T05:39:09.951Z",
+      "updatedAt": "2026-10-07T05:51:36.641Z"
+    },
+    {
+      "id": 9,
+      "restaurantId": 1,
+      "userId": 4,
+      "userName": "PH 6 5 9 1 4 LY HUY HOANG -",
+      "userAvatar": "https://ui-avatars.com/api/?name=PH%206%205%209%201%204%20LY%20HUY%20HOANG%20-&background=ff6b35&color=fff",
+      "rating": 5,
+      "content": "jkbfdjldfb",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-05",
+      "createdAt": "2026-10-05T05:43:59.950Z",
+      "updatedAt": "2026-10-05T05:44:30.060Z"
     }
   ],
   "favorites": [
-    {
-      "id": 2,
-      "userId": 2,
-      "restaurantId": 4,
-      "createdAt": "2026-10-03T12:02:44.176Z"
-    },
-    {
-      "id": 3,
-      "userId": 2,
-      "restaurantId": 1,
-      "createdAt": "2026-10-04T05:42:41.667Z"
-    },
-    {
-      "id": 4,
-      "userId": 2,
-      "restaurantId": 9,
-      "createdAt": "2026-10-04T05:43:14.897Z"
-    },
-    {
-      "id": 5,
-      "userId": 5,
-      "restaurantId": 9,
-      "createdAt": "2026-10-04T12:02:18.063Z"
-    },
     {
       "id": 6,
       "userId": 5,
@@ -561,6 +569,18 @@
       "userId": 5,
       "restaurantId": 2,
       "createdAt": "2026-10-04T12:02:20.678Z"
+    },
+    {
+      "id": 8,
+      "userId": 6,
+      "restaurantId": 1,
+      "createdAt": "2026-10-05T05:39:17.918Z"
+    },
+    {
+      "id": 9,
+      "userId": 1,
+      "restaurantId": 3,
+      "createdAt": "2026-10-05T05:55:44.905Z"
     }
   ],
   "settings": {

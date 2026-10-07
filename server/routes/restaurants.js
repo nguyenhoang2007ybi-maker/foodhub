@@ -10,6 +10,44 @@ function parsePrice(priceStr) {
   return match ? parseInt(match[0], 10) : 0;
 }
 
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+function isValidTime(value) {
+  return typeof value === 'string' && TIME_RE.test(value.trim());
+}
+
+// Đọc & chuẩn hóa giờ mở/đóng cửa từ body request.
+// Trả về null nếu request không gửi trường giờ nào (giữ nguyên dữ liệu hiện tại),
+// trả về { error } nếu Admin gửi giá trị giờ không hợp lệ.
+function resolveHours(body = {}) {
+  const hasTimeFields = body.openingTime !== undefined || body.closingTime !== undefined || body.open24 !== undefined;
+  if (!hasTimeFields) return null;
+
+  if (body.openingTime !== undefined && body.openingTime !== null && body.openingTime !== '' && !isValidTime(body.openingTime)) {
+    return { error: 'Giờ mở cửa không hợp lệ. Vui lòng chọn mốc giờ cách nhau 30 phút (ví dụ 08:00).' };
+  }
+  if (body.closingTime !== undefined && body.closingTime !== null && body.closingTime !== '' && !isValidTime(body.closingTime)) {
+    return { error: 'Giờ đóng cửa không hợp lệ. Vui lòng chọn mốc giờ cách nhau 30 phút (ví dụ 22:00).' };
+  }
+
+  const open24 = body.open24 === true;
+  let openingTime = isValidTime(body.openingTime) ? body.openingTime.trim() : (open24 ? '00:00' : '07:00');
+  let closingTime = isValidTime(body.closingTime) ? body.closingTime.trim() : null;
+
+  if (open24) {
+    closingTime = null;
+  } else if (!closingTime) {
+    return { error: 'Vui lòng chọn giờ đóng cửa hoặc chọn trạng thái mở cửa 24/24.' };
+  }
+
+  return {
+    openingTime,
+    closingTime,
+    open24,
+    openingHours: open24 ? 'Mở cửa 24/24' : `${openingTime} - ${closingTime}`
+  };
+}
+
 // 1. Lấy danh sách quán ăn
 router.get('/', optionalAuth, (req, res) => {
   try {
@@ -186,6 +224,11 @@ router.post('/', authenticateToken, requireAdmin, (req, res) => {
       return res.status(400).json({ success: false, message: 'Địa chỉ quán ăn không được để trống.' });
     }
 
+    const hours = resolveHours(req.body);
+    if (hours && hours.error) {
+      return res.status(400).json({ success: false, message: hours.error });
+    }
+
     const db = getDb();
     const newId = db.restaurants.length > 0 ? Math.max(...db.restaurants.map(r => r.id)) + 1 : 1;
 
@@ -201,7 +244,10 @@ router.post('/', authenticateToken, requireAdmin, (req, res) => {
       image: image || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=800&q=80',
       gallery: Array.isArray(gallery) ? gallery : [],
       description: description ? description.trim() : '',
-      openingHours: openingHours ? openingHours.trim() : '07:00 - 22:00',
+      openingTime: hours ? hours.openingTime : '07:00',
+      closingTime: hours ? hours.closingTime : '22:00',
+      open24: hours ? hours.open24 : false,
+      openingHours: hours ? hours.openingHours : (openingHours ? openingHours.trim() : '07:00 - 22:00'),
       phone: phone ? phone.trim() : '',
       rating: 5.0,
       reviewsCount: 0,
@@ -251,22 +297,35 @@ router.put('/:id', authenticateToken, requireAdmin, (req, res) => {
       featured
     } = req.body;
 
+    const hours = resolveHours(req.body);
+    if (hours && hours.error) {
+      return res.status(400).json({ success: false, message: hours.error });
+    }
+
     if (name) existing.name = name.trim();
     if (category) existing.category = category.trim();
     if (address) existing.address = address.trim();
-    if (area !== undefined) existing.area = area.trim();
-    if (price !== undefined) {
-      existing.price = price.trim();
+    if (area !== undefined && area !== null) existing.area = String(area).trim();
+    if (price !== undefined && price !== null) {
+      existing.price = String(price).trim();
       existing.minPrice = parsePrice(price) || existing.minPrice;
       existing.maxPrice = parsePrice(price) * 2 || existing.maxPrice;
     }
-    if (image !== undefined) existing.image = image.trim();
+    if (image !== undefined && image !== null) existing.image = String(image).trim();
     if (gallery !== undefined) existing.gallery = gallery;
-    if (description !== undefined) existing.description = description.trim();
-    if (openingHours !== undefined) existing.openingHours = openingHours.trim();
-    if (phone !== undefined) existing.phone = phone.trim();
+    if (description !== undefined && description !== null) existing.description = String(description).trim();
+    if (openingHours !== undefined && openingHours !== null) existing.openingHours = String(openingHours).trim();
+    if (phone !== undefined && phone !== null) existing.phone = String(phone).trim();
     if (menu !== undefined) existing.menu = menu;
     if (featured !== undefined) existing.featured = Boolean(featured);
+
+    // Cập nhật giờ mở/đóng cửa theo dữ liệu mới (chỉ khi client có gửi lên)
+    if (hours) {
+      existing.openingTime = hours.openingTime;
+      existing.closingTime = hours.closingTime;
+      existing.open24 = hours.open24;
+      existing.openingHours = hours.openingHours;
+    }
 
     saveDb();
 
