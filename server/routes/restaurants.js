@@ -170,7 +170,7 @@ router.get('/:id', optionalAuth, (req, res) => {
     recalculateRestaurantRating(id);
 
     const reviews = db.reviews.filter(r => r.restaurantId === id && r.status === 'approved')
-      .sort((a, b) => new Date(b.date || b.createdAt) - new Date(a.date || a.createdAt));
+      .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
 
     const related = db.restaurants
       .filter(r => r.category === restaurant.category && r.id !== id)

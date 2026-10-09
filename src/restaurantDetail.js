@@ -310,6 +310,15 @@ function renderMenu(menuItems) {
   });
 }
 
+function formatReviewTime(review) {
+  const iso = review.createdAt || review.updatedAt || review.date;
+  if (!iso) return 'Gần đây';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return review.date || 'Gần đây';
+  const two = (n) => String(n).padStart(2, '0');
+  return `${two(d.getDate())}/${two(d.getMonth() + 1)}/${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`;
+}
+
 function renderReviews(reviews) {
   const list = document.getElementById('reviews-list');
   if (!list) return;
@@ -350,7 +359,7 @@ function renderReviews(reviews) {
             <h4 class="text-xs font-bold text-on-surface">${rev.userName}</h4>
             <div class="flex items-center gap-2 mt-0.5">
               <div class="flex items-center">${starsHtml}</div>
-              <span class="text-[11px] text-secondary">• ${rev.date || 'Gần đây'}</span>
+              <span class="text-[11px] text-secondary">• ${formatReviewTime(rev)}</span>
             </div>
           </div>
         </div>

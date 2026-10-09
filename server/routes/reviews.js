@@ -92,28 +92,7 @@ router.post('/', authenticateToken, (req, res) => {
     return res.status(404).json({ success: false, message: 'Quán ăn không tồn tại.' });
   }
 
-  // Kiểm tra xem người dùng đã đánh giá quán này chưa
-  const existingReviewIndex = db.reviews.findIndex(r => r.restaurantId === restId && r.userId === req.user.id);
-  
-  if (existingReviewIndex !== -1) {
-    // Cập nhật lại đánh giá của chính người dùng
-    const existing = db.reviews[existingReviewIndex];
-    existing.rating = numRating;
-    existing.content = content.trim();
-    if (Array.isArray(images)) existing.images = images;
-    existing.updatedAt = new Date().toISOString();
-    existing.date = new Date().toISOString().split('T')[0];
-    
-    saveDb();
-    recalculateRestaurantRating(restId);
-
-    return res.json({
-      success: true,
-      message: 'Cập nhật đánh giá thành công!',
-      data: existing
-    });
-  }
-
+  // Mỗi lần gửi là một bình luận mới: không tìm/gộp/ghi đè bình luận cũ của người dùng.
   const newId = db.reviews.length > 0 ? Math.max(...db.reviews.map(r => Number(r.id) || 0)) + 1 : 1;
   const newReview = {
     id: newId,
