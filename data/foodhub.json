@@ -67,6 +67,17 @@
       "status": "active",
       "avatar": "https://ui-avatars.com/api/?name=kdnvdgf&background=ff6b35&color=fff",
       "createdAt": "2026-10-05T05:38:29.154Z"
+    },
+    {
+      "id": 7,
+      "name": "nguyen van dmm",
+      "email": "nguyenhoang2007ybi@gmail.com",
+      "phone": "0766188015",
+      "passwordHash": "$2b$10$586W054MRv9Rk0kveX7uJuIKoLGw6dIjXuCx8S8HM7XjyIAqt6Bda",
+      "role": "customer",
+      "status": "active",
+      "avatar": "https://ui-avatars.com/api/?name=nguyen%20van%20a&background=ff6b35&color=fff",
+      "createdAt": "2026-10-09T09:29:12.029Z"
     }
   ],
   "restaurants": [
@@ -245,8 +256,8 @@
       "description": "Thiên đường lẩu nấm thượng hạng với hơn 30 loại nấm quý tự nhiên nhập khẩu từ Nhật Bản, Hàn Quốc và Vân Nam. Nước lẩu ninh xương gà và thảo mộc thanh ngọt tự nhiên tốt cho sức khỏe.",
       "openingHours": "11:00 - 14:00 & 17:30 - 22:00",
       "phone": "024 7300 7318",
-      "rating": 4.6,
-      "reviewsCount": 0,
+      "rating": 5,
+      "reviewsCount": 1,
       "featured": true,
       "menu": [
         {
@@ -555,6 +566,19 @@
       "date": "2026-10-05",
       "createdAt": "2026-10-05T05:43:59.950Z",
       "updatedAt": "2026-10-05T05:44:30.060Z"
+    },
+    {
+      "id": 10,
+      "restaurantId": 5,
+      "userId": 7,
+      "userName": "nguyen van dmm",
+      "userAvatar": "https://ui-avatars.com/api/?name=nguyen%20van%20a&background=ff6b35&color=fff",
+      "rating": 5,
+      "content": "k ngon",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-09",
+      "createdAt": "2026-10-09T09:33:45.851Z"
     }
   ],
   "favorites": [
