@@ -45,7 +45,7 @@ export function logout() {
   removeUser();
   toast.success('Đã đăng xuất thành công.');
   setTimeout(() => {
-    window.location.href = '/login.html';
+    window.location.href = '/index.html';
   }, 500);
 }
 
