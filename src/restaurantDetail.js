@@ -3,6 +3,7 @@ import { api } from './api.js';
 import { toast } from './toast.js';
 import { initHeader, initFooter, getUser, isLoggedIn, updateFavoritesBadge } from './auth.js';
 import { createRestaurantCard } from './components/restaurantCard.js';
+import { addToCart, replaceCartWithDish, formatVND } from './cart.js';
 
 let currentRestaurant = null;
 let selectedStar = 5;
@@ -204,6 +205,9 @@ async function loadRestaurantDetail(id) {
       favBtn.onclick = handleFavToggle;
     }
 
+    // Render Google Maps (Chỉ nhúng trên trang chi tiết quán ăn)
+    renderGoogleMaps(currentRestaurant);
+
     // Render Menu
     renderMenu(currentRestaurant.menu);
 
@@ -283,10 +287,129 @@ async function handleFavToggle() {
   }
 }
 
+function resolveGoogleMapsUrls(restaurant) {
+  if (!restaurant) return { embedUrl: '', directUrl: '' };
+
+  let raw = (restaurant.mapUrl || '').trim();
+  const address = (restaurant.address || '').trim();
+  const name = (restaurant.name || '').trim();
+
+  // 1. Nếu Admin dán cả thẻ <iframe> của Google Maps, trích xuất thuộc tính src
+  if (raw && raw.includes('<iframe')) {
+    const srcMatch = raw.match(/src=["']([^"']+)["']/i);
+    if (srcMatch && srcMatch[1]) {
+      raw = srcMatch[1].trim();
+    }
+  }
+
+  // Truy vấn mặc định từ tên quán và địa chỉ
+  const defaultQuery = address ? `${name}, ${address}` : name;
+
+  // Nếu không có mapUrl tùy chỉnh
+  if (!raw) {
+    if (!defaultQuery) return { embedUrl: '', directUrl: '' };
+    return {
+      embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(defaultQuery)}&t=&z=15&ie=UTF8&iwloc=&output=embed`,
+      directUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(defaultQuery)}`
+    };
+  }
+
+  // 2. Nếu đã là URL dạng nhúng (embed) chuẩn của Google Maps
+  if (raw.includes('/maps/embed') || (raw.includes('maps.google') && raw.includes('output=embed'))) {
+    return {
+      embedUrl: raw,
+      directUrl: defaultQuery ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(defaultQuery)}` : raw
+    };
+  }
+
+  // 3. Nếu là URL Google Maps thông thường, trích xuất địa điểm hoặc query
+  let extractedQuery = '';
+  try {
+    const parsed = new URL(raw);
+    if (parsed.searchParams.has('q')) {
+      extractedQuery = parsed.searchParams.get('q');
+    } else if (parsed.searchParams.has('query')) {
+      extractedQuery = parsed.searchParams.get('query');
+    } else if (parsed.pathname.includes('/maps/place/')) {
+      const placeSegment = parsed.pathname.split('/maps/place/')[1];
+      if (placeSegment) {
+        const placeName = placeSegment.split('/')[0];
+        if (placeName) {
+          extractedQuery = decodeURIComponent(placeName).replace(/\+/g, ' ');
+        }
+      }
+    }
+  } catch (e) {
+    // Không phải URL chuẩn -> Admin có thể nhập trực tiếp địa chỉ hoặc tọa độ
+    extractedQuery = raw;
+  }
+
+  const queryToUse = extractedQuery || defaultQuery || raw;
+
+  return {
+    embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(queryToUse)}&t=&z=15&ie=UTF8&iwloc=&output=embed`,
+    directUrl: raw.startsWith('http') ? raw : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryToUse)}`
+  };
+}
+
+function renderGoogleMaps(restaurant) {
+  const mapIframe = document.getElementById('rest-map-iframe');
+  const mapFallback = document.getElementById('rest-map-fallback');
+  const externalLink = document.getElementById('rest-map-external-link');
+
+  if (!mapIframe) return;
+
+  const { embedUrl, directUrl } = resolveGoogleMapsUrls(restaurant);
+
+  if (!embedUrl) {
+    if (mapFallback) mapFallback.classList.remove('hidden');
+    mapIframe.classList.add('hidden');
+    if (externalLink) externalLink.classList.add('hidden');
+    return;
+  }
+
+  mapIframe.src = embedUrl;
+  mapIframe.classList.remove('hidden');
+  if (mapFallback) mapFallback.classList.add('hidden');
+
+  if (externalLink) {
+    externalLink.href = directUrl;
+    externalLink.classList.remove('hidden');
+  }
+}
+
+let pendingConflictItem = null;
+
+function setupCartConflictModal() {
+  const modal = document.getElementById('cart-conflict-modal');
+  const cancelBtn = document.getElementById('cancel-conflict-btn');
+  const confirmBtn = document.getElementById('confirm-conflict-btn');
+
+  if (cancelBtn) {
+    cancelBtn.onclick = () => {
+      pendingConflictItem = null;
+      if (modal) modal.classList.add('hidden');
+    };
+  }
+
+  if (confirmBtn) {
+    confirmBtn.onclick = () => {
+      if (pendingConflictItem && currentRestaurant) {
+        replaceCartWithDish(pendingConflictItem, currentRestaurant, 1);
+        toast.success(`Đã làm mới giỏ hàng và thêm "${pendingConflictItem.name}"!`);
+        pendingConflictItem = null;
+      }
+      if (modal) modal.classList.add('hidden');
+    };
+  }
+}
+
 function renderMenu(menuItems) {
   const container = document.getElementById('rest-menu-grid');
   const section = document.getElementById('rest-menu-container');
   if (!container) return;
+
+  setupCartConflictModal();
 
   if (!Array.isArray(menuItems) || menuItems.length === 0) {
     if (section) section.classList.add('hidden');
@@ -296,16 +419,49 @@ function renderMenu(menuItems) {
   container.innerHTML = '';
   menuItems.forEach(item => {
     const el = document.createElement('div');
-    el.className = 'flex items-center gap-3 p-3 rounded-2xl bg-surface-container-low border border-surface-container-high hover:border-primary-container/30 transition-all';
+    const isOutOfStock = item.isAvailable === false;
+    el.className = 'flex items-center gap-3 p-3.5 rounded-2xl bg-surface-container-low border border-surface-container-high hover:border-primary-container/40 hover:shadow-sm transition-all group';
     el.innerHTML = `
-      <div class="w-14 h-14 rounded-xl overflow-hidden bg-surface-container-high flex-shrink-0">
-        <img src="${item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80'}" alt="${item.name}" class="w-full h-full object-cover" />
+      <div class="w-16 h-16 rounded-xl overflow-hidden bg-surface-container-high flex-shrink-0 relative">
+        <img src="${item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80'}" alt="${item.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+        ${isOutOfStock ? `<div class="absolute inset-0 bg-black/60 flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-wider">Hết</div>` : ''}
       </div>
       <div class="flex-1 min-w-0">
         <h4 class="text-xs font-bold text-on-surface truncate">${item.name}</h4>
-        <p class="text-xs font-bold text-primary mt-0.5">${item.price || 'Liên hệ'}</p>
+        ${item.description ? `<p class="text-[11px] text-secondary truncate mt-0.5" title="${item.description}">${item.description}</p>` : ''}
+        <p class="text-xs font-bold text-primary mt-1">${formatVND(item.priceNum || item.price)}</p>
+      </div>
+      <div class="flex-shrink-0">
+        ${isOutOfStock ? `
+          <span class="px-2.5 py-1 text-[11px] font-semibold text-secondary/60 bg-surface-container-high rounded-lg cursor-not-allowed">Hết hàng</span>
+        ` : `
+          <button type="button" class="add-to-cart-btn h-8 px-3 rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95" data-dish-id="${item.id}">
+            <span class="material-symbols-outlined text-[16px]">add_shopping_cart</span>
+            <span class="hidden sm:inline">Thêm</span>
+          </button>
+        `}
       </div>
     `;
+
+    const addBtn = el.querySelector('.add-to-cart-btn');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        if (!currentRestaurant) return;
+        const res = addToCart(item, currentRestaurant, 1);
+        if (res.conflict) {
+          pendingConflictItem = item;
+          const curRestEl = document.getElementById('conflict-current-restaurant');
+          const newRestEl = document.getElementById('conflict-new-restaurant');
+          if (curRestEl) curRestEl.textContent = res.currentRestaurant.name;
+          if (newRestEl) newRestEl.textContent = res.newRestaurant.name;
+          const modal = document.getElementById('cart-conflict-modal');
+          if (modal) modal.classList.remove('hidden');
+        } else {
+          toast.success(`Đã thêm "${item.name}" vào giỏ hàng!`);
+        }
+      });
+    }
+
     container.appendChild(el);
   });
 }

@@ -15,13 +15,8 @@ router.get('/restaurant/:restaurantId', optionalAuth, (req, res) => {
     return res.status(404).json({ success: false, message: 'Không tìm thấy quán ăn.' });
   }
 
-  // Khách xem review đã được duyệt (approved) hoặc review do chính mình viết
-  let reviews = db.reviews.filter(r => {
-    if (r.restaurantId !== restaurantId) return false;
-    if (r.status === 'approved') return true;
-    if (req.user && (req.user.role === 'admin' || req.user.id === r.userId)) return true;
-    return false;
-  });
+  // Chỉ hiển thị các đánh giá đã được duyệt (approved) công khai
+  let reviews = db.reviews.filter(r => r.restaurantId === restaurantId && r.status === 'approved');
 
   // Sắp xếp mới nhất lên trước
   reviews.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
@@ -103,7 +98,7 @@ router.post('/', authenticateToken, (req, res) => {
     rating: numRating,
     content: content.trim(),
     images: Array.isArray(images) ? images : [],
-    status: 'approved',
+    status: 'pending',
     date: new Date().toISOString().split('T')[0],
     createdAt: new Date().toISOString()
   };
@@ -114,7 +109,7 @@ router.post('/', authenticateToken, (req, res) => {
 
   res.status(201).json({
     success: true,
-    message: 'Gửi đánh giá thành công! Cảm ơn nhận xét của bạn.',
+    message: 'Gửi bình luận thành công! Bình luận của bạn đang chờ quản trị viên phê duyệt.',
     data: newReview
   });
 });
@@ -236,10 +231,10 @@ router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
   const reviewId = Number(req.params.id);
   const { status } = req.body;
 
-  if (!['approved', 'pending', 'hidden'].includes(status)) {
+  if (!['approved', 'pending', 'rejected', 'hidden'].includes(status)) {
     return res.status(400).json({
       success: false,
-      message: 'Trạng thái không hợp lệ (approved, pending, hidden).'
+      message: 'Trạng thái không hợp lệ (approved, pending, rejected, hidden).'
     });
   }
 

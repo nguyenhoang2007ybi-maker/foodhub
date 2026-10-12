@@ -84,9 +84,20 @@
             <span>Quản lý người dùng</span>
           </button>
 
-          <button id="nav-reviews" class="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low transition-all text-left">
-            <span class="material-symbols-outlined text-[20px]">rate_review</span>
-            <span>Quản lý đánh giá</span>
+          <button id="nav-reviews" class="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low transition-all text-left">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-[20px]">rate_review</span>
+              <span>Quản lý đánh giá</span>
+            </div>
+            <span id="nav-pending-badge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-sm">0</span>
+          </button>
+
+          <button id="nav-orders" class="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low transition-all text-left">
+            <div class="flex items-center gap-3">
+              <span class="material-symbols-outlined text-[20px]">shopping_bag</span>
+              <span>Quản lý đơn hàng</span>
+            </div>
+            <span id="nav-orders-badge" class="hidden px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500 text-white shadow-sm">0</span>
           </button>
         </div>
       </div>
@@ -274,9 +285,43 @@
 
       <!-- 5. TAB: REVIEWS MODERATION -->
       <section id="section-reviews" class="hidden space-y-6">
-        <div>
-          <h2 class="text-xl font-black text-on-surface">Kiểm duyệt đánh giá cộng đồng</h2>
-          <p class="text-xs text-secondary mt-0.5">Duyệt hoặc xóa bỏ các đánh giá có nội dung không phù hợp</p>
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-black text-on-surface">Kiểm duyệt đánh giá cộng đồng</h2>
+            <p class="text-xs text-secondary mt-0.5">Duyệt hoặc từ chối các bình luận của khách hàng trước khi hiển thị công khai trên website</p>
+          </div>
+          <button id="refresh-reviews-btn" type="button" class="h-9 px-3.5 rounded-xl border border-surface-container bg-surface-container-lowest hover:bg-surface-container-low text-secondary text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto">
+            <span class="material-symbols-outlined text-[16px]">refresh</span>
+            <span>Làm mới danh sách</span>
+          </button>
+        </div>
+
+        <!-- Filter bar & Search -->
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <!-- Filter pills -->
+          <div class="flex items-center gap-1.5 p-1 bg-surface-container-low rounded-2xl overflow-x-auto" id="review-filter-pills">
+            <button type="button" class="rev-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-primary-container text-on-primary shadow-sm whitespace-nowrap cursor-pointer" data-filter="all">
+              Tất cả <span id="rev-filter-count-all" class="ml-1 text-[11px] opacity-80">(0)</span>
+            </button>
+            <button type="button" class="rev-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer" data-filter="pending">
+              <span>Chờ duyệt</span>
+              <span id="rev-filter-count-pending" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">0</span>
+            </button>
+            <button type="button" class="rev-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer" data-filter="approved">
+              <span>Đã duyệt</span>
+              <span id="rev-filter-count-approved" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">0</span>
+            </button>
+            <button type="button" class="rev-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer" data-filter="rejected">
+              <span>Đã từ chối</span>
+              <span id="rev-filter-count-rejected" class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">0</span>
+            </button>
+          </div>
+
+          <!-- Search input -->
+          <div class="relative w-full md:w-72">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-secondary text-[16px]">search</span>
+            <input id="admin-search-reviews" type="search" placeholder="Tìm theo quán, người viết, nội dung..." class="w-full h-9 pl-9 pr-3 bg-surface-container-lowest border border-surface-container rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container" />
+          </div>
         </div>
 
         <div class="bg-surface-container-lowest border border-surface-container rounded-3xl overflow-hidden shadow-sm">
@@ -286,13 +331,94 @@
                 <tr>
                   <th class="p-4">Quán ăn</th>
                   <th class="p-4">Người đánh giá</th>
-                  <th class="p-4">Sao</th>
-                  <th class="p-4">Nội dung</th>
+                  <th class="p-4">Điểm</th>
+                  <th class="p-4 min-w-[220px]">Nội dung</th>
+                  <th class="p-4">Ngày gửi</th>
                   <th class="p-4">Trạng thái</th>
-                  <th class="p-4 text-right">Xử lý</th>
+                  <th class="p-4 text-right min-w-[170px]">Thao tác duyệt</th>
                 </tr>
               </thead>
               <tbody id="admin-reviews-tbody" class="divide-y divide-surface-container">
+                <!-- Populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- 6. TAB: ORDERS MANAGEMENT -->
+      <section id="section-orders" class="hidden space-y-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-black text-on-surface">Quản lý đơn hàng trực tuyến</h2>
+            <p class="text-xs text-secondary mt-0.5">Kiểm soát đơn hàng, theo dõi giao nhận và cập nhật trạng thái đơn</p>
+          </div>
+          <button id="admin-refresh-orders-btn" type="button" class="h-10 px-4 rounded-xl bg-surface-container-low border border-surface-container hover:bg-surface-container text-secondary hover:text-on-surface text-xs font-semibold inline-flex items-center gap-1.5 transition-colors cursor-pointer self-start sm:self-auto">
+            <span class="material-symbols-outlined text-[18px]">refresh</span>
+            <span>Làm mới đơn hàng</span>
+          </button>
+        </div>
+
+        <!-- 5 Order Stats Cards -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+          <div class="bg-surface-container-lowest border border-surface-container p-4 rounded-2xl shadow-sm">
+            <p class="text-[11px] text-secondary font-medium">Tổng đơn hàng</p>
+            <p id="admin-order-stat-total" class="text-xl font-black text-on-surface mt-1">0</p>
+          </div>
+          <div class="bg-surface-container-lowest border border-surface-container p-4 rounded-2xl shadow-sm">
+            <p class="text-[11px] text-amber-700 font-medium">Chờ xác nhận</p>
+            <p id="admin-order-stat-pending" class="text-xl font-black text-amber-600 mt-1">0</p>
+          </div>
+          <div class="bg-surface-container-lowest border border-surface-container p-4 rounded-2xl shadow-sm">
+            <p class="text-[11px] text-orange-700 font-medium">Đang xử lý / Giao</p>
+            <p id="admin-order-stat-shipping" class="text-xl font-black text-orange-600 mt-1">0</p>
+          </div>
+          <div class="bg-surface-container-lowest border border-surface-container p-4 rounded-2xl shadow-sm">
+            <p class="text-[11px] text-emerald-700 font-medium">Đã hoàn tất</p>
+            <p id="admin-order-stat-completed" class="text-xl font-black text-emerald-600 mt-1">0</p>
+          </div>
+          <div class="bg-surface-container-lowest border border-surface-container p-4 rounded-2xl shadow-sm col-span-2 sm:col-span-1">
+            <p class="text-[11px] text-primary font-medium">Doanh thu hoàn tất</p>
+            <p id="admin-order-stat-revenue" class="text-xl font-black text-primary mt-1">0 đ</p>
+          </div>
+        </div>
+
+        <!-- Filter bar -->
+        <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3">
+          <!-- Status filter tabs -->
+          <div class="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
+            <button type="button" class="order-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-primary-container text-white cursor-pointer" data-filter="all">Tất cả</button>
+            <button type="button" class="order-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low cursor-pointer" data-filter="pending">Chờ xác nhận</button>
+            <button type="button" class="order-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low cursor-pointer" data-filter="confirmed">Đã xác nhận</button>
+            <button type="button" class="order-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low cursor-pointer" data-filter="preparing">Đang nấu</button>
+            <button type="button" class="order-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low cursor-pointer" data-filter="shipping">Đang giao</button>
+            <button type="button" class="order-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low cursor-pointer" data-filter="completed">Hoàn tất</button>
+            <button type="button" class="order-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low cursor-pointer" data-filter="cancelled">Đã hủy</button>
+          </div>
+
+          <!-- Search input -->
+          <div class="relative w-full md:w-72">
+            <span class="material-symbols-outlined absolute left-3 top-2.5 text-secondary text-[16px]">search</span>
+            <input id="admin-search-orders" type="search" placeholder="Mã đơn, người nhận, SĐT, quán..." class="w-full h-9 pl-9 pr-3 bg-surface-container-lowest border border-surface-container rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container" />
+          </div>
+        </div>
+
+        <!-- Orders Table -->
+        <div class="bg-surface-container-lowest border border-surface-container rounded-3xl overflow-hidden shadow-sm">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs">
+              <thead class="bg-surface-container-low text-secondary border-b border-surface-container uppercase text-[10px] font-bold tracking-wider">
+                <tr>
+                  <th class="p-4">Mã đơn & Thời gian</th>
+                  <th class="p-4">Khách hàng & Nhận hàng</th>
+                  <th class="p-4">Quán ăn</th>
+                  <th class="p-4">Món ăn</th>
+                  <th class="p-4">Tổng tiền & TT</th>
+                  <th class="p-4">Trạng thái</th>
+                  <th class="p-4 text-right">Chi tiết</th>
+                </tr>
+              </thead>
+              <tbody id="admin-orders-tbody" class="divide-y divide-surface-container">
                 <!-- Populated dynamically -->
               </tbody>
             </table>
@@ -341,6 +467,26 @@
               <div id="modal-rest-area-list" class="hidden absolute z-30 left-0 right-0 top-full mt-1 max-h-52 overflow-y-auto bg-surface-container-lowest border border-surface-container rounded-xl shadow-lg p-1"></div>
             </div>
           </div>
+        </div>
+
+        <!-- Quản lý vị trí Google Maps -->
+        <div>
+          <label class="block text-xs font-bold text-on-surface mb-1 flex items-center justify-between">
+            <span class="inline-flex items-center gap-1.5">
+              <span class="material-symbols-outlined text-primary text-[17px]">map</span>
+              <span>Đường dẫn Google Maps (URL / Tọa độ / Mã nhúng):</span>
+            </span>
+            <span class="text-[11px] font-normal text-secondary">Tùy chọn</span>
+          </label>
+          <input
+            id="modal-rest-map-url"
+            type="text"
+            placeholder="Dán link Google Maps (https://maps.google.com/...) hoặc để trống để tạo tự động"
+            class="w-full h-10 px-3 bg-surface-container-low border border-surface-container rounded-xl text-xs focus:outline-none focus:border-primary-container"
+          />
+          <p class="text-[11px] text-secondary mt-1">
+            * Nếu để trống, FoodHub sẽ tự động tạo bản đồ dựa theo <b>Tên quán</b> và <b>Địa chỉ chi tiết</b>.
+          </p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -398,6 +544,25 @@
           <button id="save-rest-modal" type="submit" class="h-10 px-6 rounded-xl bg-primary-container hover:bg-primary text-on-primary font-bold text-xs shadow-sm">Lưu quán ăn</button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- ADMIN ORDER DETAIL & STATUS UPDATE MODAL -->
+  <div id="admin-order-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+    <div class="bg-surface-container-lowest rounded-3xl max-w-2xl w-full p-6 sm:p-8 shadow-2xl border border-surface-container my-8">
+      <div class="flex items-center justify-between pb-3 border-b border-surface-container">
+        <div>
+          <span class="text-xs text-secondary font-medium">Chi tiết đơn hàng:</span>
+          <h3 id="admin-order-modal-code" class="text-lg font-black text-primary">FH...</h3>
+        </div>
+        <button id="admin-order-modal-close" type="button" class="text-secondary hover:text-on-surface p-1">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <div id="admin-order-modal-body" class="py-4 space-y-4">
+        <!-- Rendered by JS -->
+      </div>
     </div>
   </div>
 
