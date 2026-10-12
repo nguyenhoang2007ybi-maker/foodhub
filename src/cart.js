@@ -222,9 +222,18 @@ export function getCartSubtotal() {
   }, 0);
 }
 
-// Định dạng tiền tệ VND đẹp
+// Định dạng tiền tệ VND đẹp.
+// Nhận cả số và chuỗi giá kiểu Việt Nam ("75.000đ", "10.000đ/cặp").
+// Dấu chấm là phân cách hàng nghìn nên phải loại bỏ trước khi parse.
 export function formatVND(amount) {
-  const n = Number(amount) || 0;
+  let n;
+  if (typeof amount === 'string') {
+    const digits = amount.replace(/[^\d]/g, '');
+    n = digits ? parseInt(digits, 10) : 0;
+  } else {
+    n = Number(amount);
+  }
+  if (!Number.isFinite(n)) n = 0;
   return n.toLocaleString('vi-VN') + ' đ';
 }
 

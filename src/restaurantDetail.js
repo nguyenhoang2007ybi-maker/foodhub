@@ -18,6 +18,42 @@ const starLabels = {
   5: '5 sao - Tuyệt vời'
 };
 
+// Chuyển chuỗi giá kiểu Việt Nam ("75.000đ", "10.000đ/cặp", "650.000đ/set")
+// thành số nguyên. Dấu chấm là phân cách hàng nghìn nên phải loại bỏ trước khi
+// parse — không dùng trực tiếp Number()/parseFloat() vì sẽ ra NaN hoặc 75.
+function parsePriceNumber(value) {
+  if (typeof value === 'number') {
+    return Number.isFinite(value) ? Math.round(value) : 0;
+  }
+  if (value === null || value === undefined) return 0;
+  const digits = String(value).replace(/[^\d]/g, '');
+  return digits ? parseInt(digits, 10) : 0;
+}
+
+// Hiển thị giá món ăn: ưu tiên trường priceNum, nếu không có thì bóc tách từ
+// chuỗi price. Giữ lại hậu tố đơn vị (ví dụ "/cặp", "/set") để không mất thông tin.
+function formatDishPrice(item) {
+  if (!item) return 'Liên hệ';
+
+  if (typeof item.priceNum === 'number' && Number.isFinite(item.priceNum) && item.priceNum > 0) {
+    return formatVND(item.priceNum);
+  }
+
+  const raw = item.price;
+  if (raw === null || raw === undefined || raw === '') return 'Liên hệ';
+
+  if (typeof raw === 'number') {
+    return Number.isFinite(raw) && raw > 0 ? formatVND(raw) : 'Liên hệ';
+  }
+
+  const text = String(raw).trim();
+  const amount = parsePriceNumber(text);
+  if (amount <= 0) return text || 'Liên hệ';
+
+  const suffix = text.replace(/^[\d.,\s]+/, '').replace(/^đ\s*/i, '');
+  return formatVND(amount) + suffix;
+}
+
 // Hiển thị giờ mở cửa: ưu tiên dữ liệu mới (openingTime/closingTime/open24),
 // fallback về openingHours của dữ liệu cũ để không làm mất thông tin quán ăn cũ.
 function formatOpeningHours(restaurant) {
@@ -287,94 +323,99 @@ async function handleFavToggle() {
   }
 }
 
+// Tạo URL nhúng Google Maps KHÔNG cần API key từ địa chỉ/tên của quán ăn.
+// Hàm này chỉ được gọi trên trang chi tiết quán ăn (trang chủ không gọi).
 function resolveGoogleMapsUrls(restaurant) {
-  if (!restaurant) return { embedUrl: '', directUrl: '' };
+  const empty = { embedUrl: '', directUrl: '' };
+  if (!restaurant) return empty;
 
-  let raw = (restaurant.mapUrl || '').trim();
-  const address = (restaurant.address || '').trim();
-  const name = (restaurant.name || '').trim();
+  const name = String(restaurant.name || '').trim();
+  const address = String(restaurant.address || '').trim();
 
-  // 1. Nếu Admin dán cả thẻ <iframe> của Google Maps, trích xuất thuộc tính src
-  if (raw && raw.includes('<iframe')) {
+  // Admin có thể đã dán sẵn link Google Maps (hoặc cả thẻ <iframe>) -> ưu tiên dùng.
+  let raw = String(restaurant.mapUrl || '').trim();
+  if (raw && /<iframe/i.test(raw)) {
     const srcMatch = raw.match(/src=["']([^"']+)["']/i);
-    if (srcMatch && srcMatch[1]) {
-      raw = srcMatch[1].trim();
-    }
+    raw = srcMatch && srcMatch[1] ? srcMatch[1].trim() : '';
   }
 
-  // Truy vấn mặc định từ tên quán và địa chỉ
-  const defaultQuery = address ? `${name}, ${address}` : name;
+  const query = [name, address].filter(Boolean).join(', ');
 
-  // Nếu không có mapUrl tùy chỉnh
+  // 1. Không có link tùy chỉnh -> dựng bản đồ từ địa chỉ của quán.
+  // Thiếu địa chỉ thì trả về rỗng để hiển thị thông báo thay vì bản đồ sai.
   if (!raw) {
-    if (!defaultQuery) return { embedUrl: '', directUrl: '' };
+    if (!address) return empty;
+    const q = query || address;
     return {
-      embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(defaultQuery)}&t=&z=15&ie=UTF8&iwloc=&output=embed`,
-      directUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(defaultQuery)}`
+      embedUrl: `https://www.google.com/maps?q=${encodeURIComponent(q)}&z=15&output=embed`,
+      directUrl: `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(q)}`
     };
   }
 
-  // 2. Nếu đã là URL dạng nhúng (embed) chuẩn của Google Maps
-  if (raw.includes('/maps/embed') || (raw.includes('maps.google') && raw.includes('output=embed'))) {
+  // 2. Link đã ở dạng nhúng sẵn của Google Maps.
+  if (raw.includes('/maps/embed') || (raw.includes('/maps?') && raw.includes('output=embed'))) {
     return {
       embedUrl: raw,
-      directUrl: defaultQuery ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(defaultQuery)}` : raw
+      directUrl: query ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}` : raw
     };
   }
 
-  // 3. Nếu là URL Google Maps thông thường, trích xuất địa điểm hoặc query
+  // 3. Link Google Maps thông thường -> trích xuất địa điểm/query.
   let extractedQuery = '';
   try {
     const parsed = new URL(raw);
-    if (parsed.searchParams.has('q')) {
-      extractedQuery = parsed.searchParams.get('q');
-    } else if (parsed.searchParams.has('query')) {
-      extractedQuery = parsed.searchParams.get('query');
-    } else if (parsed.pathname.includes('/maps/place/')) {
+    extractedQuery = parsed.searchParams.get('q') || parsed.searchParams.get('query') || '';
+    if (!extractedQuery && parsed.pathname.includes('/maps/place/')) {
       const placeSegment = parsed.pathname.split('/maps/place/')[1];
       if (placeSegment) {
-        const placeName = placeSegment.split('/')[0];
-        if (placeName) {
-          extractedQuery = decodeURIComponent(placeName).replace(/\+/g, ' ');
-        }
+        extractedQuery = decodeURIComponent(placeSegment.split('/')[0]).replace(/\+/g, ' ');
       }
     }
   } catch (e) {
-    // Không phải URL chuẩn -> Admin có thể nhập trực tiếp địa chỉ hoặc tọa độ
+    // Không phải URL hợp lệ -> coi như Admin nhập trực tiếp địa chỉ hoặc tọa độ.
     extractedQuery = raw;
   }
 
-  const queryToUse = extractedQuery || defaultQuery || raw;
-
+  const queryToUse = extractedQuery || query || raw;
   return {
-    embedUrl: `https://maps.google.com/maps?q=${encodeURIComponent(queryToUse)}&t=&z=15&ie=UTF8&iwloc=&output=embed`,
+    embedUrl: `https://www.google.com/maps?q=${encodeURIComponent(queryToUse)}&z=15&output=embed`,
     directUrl: raw.startsWith('http') ? raw : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(queryToUse)}`
   };
 }
 
 function renderGoogleMaps(restaurant) {
+  const container = document.getElementById('rest-map-container');
   const mapIframe = document.getElementById('rest-map-iframe');
   const mapFallback = document.getElementById('rest-map-fallback');
   const externalLink = document.getElementById('rest-map-external-link');
 
-  if (!mapIframe) return;
+  // Chỉ tồn tại trên trang chi tiết quán ăn -> đảm bảo không chạy ở trang chủ.
+  if (!container || !mapIframe) return;
 
   const { embedUrl, directUrl } = resolveGoogleMapsUrls(restaurant);
 
   if (!embedUrl) {
-    if (mapFallback) mapFallback.classList.remove('hidden');
+    mapIframe.removeAttribute('src');
     mapIframe.classList.add('hidden');
+    if (mapFallback) mapFallback.classList.remove('hidden');
     if (externalLink) externalLink.classList.add('hidden');
+    container.classList.remove('hidden');
     return;
   }
 
   mapIframe.src = embedUrl;
   mapIframe.classList.remove('hidden');
   if (mapFallback) mapFallback.classList.add('hidden');
+  container.classList.remove('hidden');
 
   if (externalLink) {
-    externalLink.href = directUrl;
-    externalLink.classList.remove('hidden');
+    if (directUrl) {
+      externalLink.href = directUrl;
+      externalLink.classList.remove('hidden');
+    } else {
+      externalLink.removeAttribute('href');
+      externalLink.classList.add('hidden');
+    }
   }
 }
 
@@ -429,7 +470,7 @@ function renderMenu(menuItems) {
       <div class="flex-1 min-w-0">
         <h4 class="text-xs font-bold text-on-surface truncate">${item.name}</h4>
         ${item.description ? `<p class="text-[11px] text-secondary truncate mt-0.5" title="${item.description}">${item.description}</p>` : ''}
-        <p class="text-xs font-bold text-primary mt-1">${formatVND(item.priceNum || item.price)}</p>
+        <p class="text-xs font-bold text-primary mt-1">${formatDishPrice(item)}</p>
       </div>
       <div class="flex-shrink-0">
         ${isOutOfStock ? `
