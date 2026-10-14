@@ -1,7 +1,7 @@
 // FoodHub Cart & Checkout & Order History Controller
 import { api } from './api.js';
 import { toast } from './toast.js';
-import { initHeader, initFooter, getUser, isLoggedIn } from './auth.js';
+import { initHeader, initFooter, isLoggedIn } from './auth.js';
 import {
   getCart,
   saveCart,
@@ -10,19 +10,19 @@ import {
   clearCart,
   getCartCount,
   getCartSubtotal,
+  calculateOrderSummary,
   formatVND,
-  updateCartBadge
+  updateCartBadge,
+  COUPONS,
+  FREESHIP_THRESHOLD,
+  SHIPPING_FEE,
+  getAppliedCoupon,
+  setAppliedCoupon,
+  clearAppliedCoupon
 } from './cart.js';
 
-let appliedCoupon = null;
-let isSubmitting = false;
+let appliedCoupon = getAppliedCoupon();
 let pendingCancelOrderId = null;
-
-const COUPONS = {
-  FOODHUB10: { code: 'FOODHUB10', type: 'percent', value: 10, max: 50000, description: 'Giảm 10% tối đa 50k' },
-  FREESHIP: { code: 'FREESHIP', type: 'freeship', description: 'Miễn phí giao hàng 15k' },
-  BANMOI: { code: 'BANMOI', type: 'fixed', value: 20000, minOrder: 50000, description: 'Giảm 20k cho đơn từ 50k' }
-};
 
 const STATUS_MAP = {
   pending: { label: 'Chờ xác nhận', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: 'schedule' },
@@ -39,8 +39,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupTabs();
   setupCartView();
-  setupCheckoutForm();
   setupModals();
+
+  // Nếu người dùng đã áp dụng ưu đãi trước đó (ví dụ quay lại từ trang thanh toán)
+  if (appliedCoupon) {
+    const badge = document.getElementById('applied-coupon-badge');
+    const badgeText = document.getElementById('applied-coupon-text');
+    const couponInput = document.getElementById('coupon-input');
+    if (couponInput) couponInput.value = appliedCoupon.code;
+    if (badge && badgeText) {
+      badgeText.textContent = `Đã áp dụng mã: ${appliedCoupon.code} (${appliedCoupon.description})`;
+      badge.classList.remove('hidden');
+    }
+  }
 
   // Kiểm tra tab từ URL (#orders hoặc ?tab=orders)
   const urlParams = new URLSearchParams(window.location.search);
@@ -108,8 +119,26 @@ function setupCartView() {
     await clearCart();
     document.getElementById('clear-cart-modal')?.classList.add('hidden');
     appliedCoupon = null;
+    clearAppliedCoupon();
     toast.info('Đã làm trống giỏ hàng.');
     renderCart();
+  });
+
+  // Nút chuyển sang trang thanh toán riêng
+  document.getElementById('proceed-to-checkout-btn')?.addEventListener('click', () => {
+    const cart = getCart();
+    if (!cart.items || cart.items.length === 0) {
+      toast.warning('Giỏ hàng của bạn đang trống.');
+      return;
+    }
+    if (!isLoggedIn()) {
+      toast.warning('Vui lòng đăng nhập để tiến hành thanh toán.');
+      setTimeout(() => {
+        window.location.href = `/login.html?returnUrl=${encodeURIComponent('/checkout.html')}`;
+      }, 800);
+      return;
+    }
+    window.location.href = '/checkout.html';
   });
 
   // Coupon handling
@@ -124,6 +153,7 @@ function setupCartView() {
 
   removeCouponBtn?.addEventListener('click', () => {
     appliedCoupon = null;
+    clearAppliedCoupon();
     if (couponInput) couponInput.value = '';
     document.getElementById('applied-coupon-badge')?.classList.add('hidden');
     toast.info('Đã gỡ mã ưu đãi.');
@@ -159,6 +189,7 @@ function applyCouponCode(code) {
   }
 
   appliedCoupon = coupon;
+  setAppliedCoupon(coupon);
   const badge = document.getElementById('applied-coupon-badge');
   const badgeText = document.getElementById('applied-coupon-text');
   if (badge && badgeText) {
@@ -188,6 +219,13 @@ function renderCart() {
 
   emptyState?.classList.add('hidden');
   contentState?.classList.remove('hidden');
+
+  // Cảnh báo nếu người dùng chưa đăng nhập
+  const guestWarning = document.getElementById('guest-checkout-warning');
+  if (guestWarning) {
+    if (isLoggedIn()) guestWarning.classList.add('hidden');
+    else guestWarning.classList.remove('hidden');
+  }
 
   // Restaurant details
   const restNameEl = document.getElementById('cart-rest-name');
@@ -294,41 +332,24 @@ function renderCart() {
 
 function renderSummary() {
   const subtotal = getCartSubtotal();
-  const freeshipThreshold = 200000;
-  let shippingFee = subtotal >= freeshipThreshold ? 0 : 15000;
+  const { shippingFee, discount, total } = calculateOrderSummary(subtotal, appliedCoupon);
 
   // Freeship Progress Bar
   const freeshipText = document.getElementById('freeship-progress-text');
   const freeshipStatus = document.getElementById('freeship-status-tag');
   const freeshipBar = document.getElementById('freeship-progress-bar');
 
-  if (subtotal >= freeshipThreshold) {
+  if (subtotal >= FREESHIP_THRESHOLD) {
     if (freeshipText) freeshipText.textContent = '🎉 Đơn hàng đã đủ điều kiện Miễn phí giao hàng!';
     if (freeshipStatus) freeshipStatus.textContent = '0đ (Free)';
     if (freeshipBar) freeshipBar.style.width = '100%';
   } else {
-    const remain = freeshipThreshold - subtotal;
-    const percent = Math.min(100, Math.round((subtotal / freeshipThreshold) * 100));
+    const remain = FREESHIP_THRESHOLD - subtotal;
+    const percent = Math.min(100, Math.round((subtotal / FREESHIP_THRESHOLD) * 100));
     if (freeshipText) freeshipText.textContent = `Thêm ${formatVND(remain)} để được Freeship 15k!`;
     if (freeshipStatus) freeshipStatus.textContent = '15k';
     if (freeshipBar) freeshipBar.style.width = `${percent}%`;
   }
-
-  // Calculate discount
-  let discount = 0;
-  if (appliedCoupon) {
-    if (appliedCoupon.type === 'percent') {
-      discount = Math.min(appliedCoupon.max || 50000, Math.round((subtotal * appliedCoupon.value) / 100));
-    } else if (appliedCoupon.type === 'freeship') {
-      discount = shippingFee;
-    } else if (appliedCoupon.type === 'fixed') {
-      if (subtotal >= (appliedCoupon.minOrder || 0)) {
-        discount = appliedCoupon.value;
-      }
-    }
-  }
-
-  const total = Math.max(0, subtotal + shippingFee - discount);
 
   // Render price numbers
   const subtotalEl = document.getElementById('price-subtotal');
@@ -350,121 +371,6 @@ function renderSummary() {
   }
 
   if (totalEl) totalEl.textContent = formatVND(total);
-}
-
-// 3. Checkout Form submission
-function setupCheckoutForm() {
-  const form = document.getElementById('checkout-form');
-  const guestWarning = document.getElementById('guest-checkout-warning');
-  const user = getUser();
-  const logged = isLoggedIn();
-
-  if (logged && user) {
-    guestWarning?.classList.add('hidden');
-    const nameInput = document.getElementById('order-recipient-name');
-    const phoneInput = document.getElementById('order-recipient-phone');
-    const addrInput = document.getElementById('order-delivery-address');
-
-    if (nameInput && !nameInput.value) nameInput.value = user.name || '';
-    if (phoneInput && !phoneInput.value) phoneInput.value = user.phone || '';
-    if (addrInput && !addrInput.value) addrInput.value = user.address || '';
-  } else {
-    guestWarning?.classList.remove('hidden');
-  }
-
-  form?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    if (!isLoggedIn()) {
-      toast.warning('Vui lòng đăng nhập tài khoản để đặt hàng.');
-      setTimeout(() => {
-        window.location.href = `/login.html?returnUrl=${encodeURIComponent('/cart.html')}`;
-      }, 1000);
-      return;
-    }
-
-    const cart = getCart();
-    if (!cart.items || cart.items.length === 0) {
-      toast.error('Giỏ hàng của bạn đang trống.');
-      return;
-    }
-
-    if (isSubmitting) return;
-
-    const recipientName = document.getElementById('order-recipient-name')?.value.trim();
-    const recipientPhone = document.getElementById('order-recipient-phone')?.value.trim();
-    const deliveryAddress = document.getElementById('order-delivery-address')?.value.trim();
-    const note = document.getElementById('order-note')?.value.trim();
-
-    if (!recipientName || recipientName.length < 2) {
-      toast.warning('Vui lòng nhập họ tên người nhận.');
-      return;
-    }
-
-    if (!/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(recipientPhone)) {
-      toast.warning('Số điện thoại không hợp lệ (cần 10 chữ số).');
-      return;
-    }
-
-    if (!deliveryAddress || deliveryAddress.length < 5) {
-      toast.warning('Vui lòng nhập địa chỉ giao hàng cụ thể.');
-      return;
-    }
-
-    const submitBtn = document.getElementById('submit-order-btn');
-    try {
-      isSubmitting = true;
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = `
-          <span class="inline-block animate-spin material-symbols-outlined text-[20px]">progress_activity</span>
-          <span>Đang tạo đơn hàng...</span>
-        `;
-      }
-
-      const payload = {
-        restaurantId: cart.restaurantId,
-        items: cart.items.map(i => ({
-          dishId: i.dishId,
-          quantity: i.quantity,
-          note: i.note
-        })),
-        recipientName,
-        recipientPhone,
-        deliveryAddress,
-        note,
-        paymentMethod: 'COD',
-        couponCode: appliedCoupon ? appliedCoupon.code : undefined
-      };
-
-      const res = await api.post('/orders', payload);
-
-      if (res && res.success && res.data) {
-        // Xóa giỏ hàng local
-        await clearCart();
-        appliedCoupon = null;
-
-        toast.success(`Đặt hàng thành công! Mã đơn: ${res.data.code}`);
-
-        // Chuyển sang xem danh sách đơn hàng
-        switchTab('orders');
-      } else {
-        toast.error(res?.message || 'Không thể tạo đơn hàng. Vui lòng thử lại.');
-      }
-    } catch (err) {
-      console.error('Lỗi đặt hàng:', err);
-      toast.error(err.message || 'Lỗi kết nối máy chủ khi tạo đơn hàng.');
-    } finally {
-      isSubmitting = false;
-      if (submitBtn) {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `
-          <span class="material-symbols-outlined text-[20px]">check_circle</span>
-          <span>Xác nhận đặt hàng ngay</span>
-        `;
-      }
-    }
-  });
 }
 
 // 4. Lịch sử đơn hàng của tôi

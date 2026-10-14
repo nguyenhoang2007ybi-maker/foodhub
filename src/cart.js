@@ -3,10 +3,56 @@ import { getUser, isLoggedIn } from './auth.js';
 
 let syncTimeout = null;
 
+// Danh sách mã ưu đãi được hệ thống hỗ trợ (mirror với backend)
+export const COUPONS = {
+  FOODHUB10: { code: 'FOODHUB10', type: 'percent', value: 10, max: 50000, description: 'Giảm 10% tối đa 50k' },
+  FREESHIP: { code: 'FREESHIP', type: 'freeship', description: 'Miễn phí giao hàng 15k' },
+  BANMOI: { code: 'BANMOI', type: 'fixed', value: 20000, minOrder: 50000, description: 'Giảm 20k cho đơn từ 50k' }
+};
+
+export const FREESHIP_THRESHOLD = 200000;
+export const SHIPPING_FEE = 15000;
+
 // Khóa lưu giỏ hàng theo từng user hoặc khách vãng lai
 export function getCartKey() {
   const user = getUser();
   return user ? `foodhub_cart_user_${user.id}` : 'foodhub_cart_guest';
+}
+
+// Lưu / đọc mã ưu đãi đang áp dụng để dùng chung giữa trang giỏ hàng và thanh toán
+function getCouponStorageKey() {
+  return `${getCartKey()}_coupon`;
+}
+
+export function getAppliedCoupon() {
+  try {
+    const raw = localStorage.getItem(getCouponStorageKey());
+    if (!raw) return null;
+    const code = JSON.parse(raw);
+    return COUPONS[code] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function setAppliedCoupon(coupon) {
+  try {
+    if (!coupon) {
+      localStorage.removeItem(getCouponStorageKey());
+      return;
+    }
+    localStorage.setItem(getCouponStorageKey(), JSON.stringify(coupon.code));
+  } catch (e) {
+    console.warn('Không thể lưu mã ưu đãi:', e);
+  }
+}
+
+export function clearAppliedCoupon() {
+  try {
+    localStorage.removeItem(getCouponStorageKey());
+  } catch (e) {
+    // ignore
+  }
 }
 
 // Lấy dữ liệu giỏ hàng hiện tại
@@ -90,8 +136,8 @@ export function addToCart(dish, restaurant, quantity = 1, note = '') {
   cart.restaurantName = restaurant.name;
   cart.restaurantAddress = restaurant.address || '';
 
-  const dishId = Number(dish.id);
-  const existingItem = cart.items.find(item => Number(item.dishId) === dishId);
+  const rawId = dish.id !== undefined && dish.id !== null ? dish.id : (dish.dishId !== undefined ? dish.dishId : dish.name);
+  const existingItem = cart.items.find(item => String(item.dishId) === String(rawId));
 
   const priceNum = dish.priceNum || (parseInt(String(dish.price || '').replace(/[^\d]/g, ''), 10) || 0);
 
@@ -100,7 +146,7 @@ export function addToCart(dish, restaurant, quantity = 1, note = '') {
     if (note) existingItem.note = note;
   } else {
     cart.items.push({
-      dishId: dish.id,
+      dishId: rawId,
       name: dish.name,
       price: dish.price,
       priceNum: priceNum,
@@ -220,6 +266,28 @@ export function getCartSubtotal() {
     const p = item.priceNum || (parseInt(String(item.price || '').replace(/[^\d]/g, ''), 10) || 0);
     return sum + p * (Number(item.quantity) || 0);
   }, 0);
+}
+
+// Tính toán tổng kết đơn hàng dùng chung cho trang giỏ hàng và trang thanh toán.
+// Quy tắc giống backend: freeship cho đơn từ 200.000đ, phí ship 15.000đ.
+export function calculateOrderSummary(subtotal, coupon = null) {
+  const shippingFee = subtotal >= FREESHIP_THRESHOLD ? 0 : SHIPPING_FEE;
+  let discount = 0;
+
+  if (coupon) {
+    if (coupon.type === 'percent') {
+      discount = Math.min(coupon.max || 50000, Math.round((subtotal * coupon.value) / 100));
+    } else if (coupon.type === 'freeship') {
+      discount = shippingFee;
+    } else if (coupon.type === 'fixed') {
+      if (subtotal >= (coupon.minOrder || 0)) {
+        discount = coupon.value;
+      }
+    }
+  }
+
+  const total = Math.max(0, subtotal + shippingFee - discount);
+  return { subtotal, shippingFee, discount, total };
 }
 
 // Định dạng tiền tệ VND đẹp.

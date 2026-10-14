@@ -67,6 +67,17 @@
       "status": "active",
       "avatar": "https://ui-avatars.com/api/?name=kdnvdgf&background=ff6b35&color=fff",
       "createdAt": "2026-10-05T05:38:29.154Z"
+    },
+    {
+      "id": 7,
+      "name": "nguyen manh toan",
+      "email": "manhtoanhp07@gmail.com",
+      "phone": "0344164393",
+      "passwordHash": "$2b$10$n8jJ6wB4SKFWaH3vTCcFauRzswJX52i6TEq/d9A9eqMuIj/ec0xQu",
+      "role": "customer",
+      "status": "active",
+      "avatar": "https://ui-avatars.com/api/?name=nguyen%20manh%20toan&background=ff6b35&color=fff",
+      "createdAt": "2026-10-14T05:23:01.981Z"
     }
   ],
   "restaurants": [
@@ -600,6 +611,12 @@
       "userId": 2,
       "restaurantId": 1,
       "createdAt": "2026-10-09T06:20:57.442Z"
+    },
+    {
+      "id": 11,
+      "userId": 7,
+      "restaurantId": 2,
+      "createdAt": "2026-10-14T05:24:20.996Z"
     }
   ],
   "settings": {
@@ -610,5 +627,46 @@
     "address": "Hà Nội & TP. Hồ Chí Minh",
     "description": "FoodHub là nền tảng tìm kiếm, khám phá và chia sẻ trải nghiệm ăn uống chân thực nhất.",
     "logoUrl": "/favicon.svg"
+  },
+  "orders": [],
+  "carts": [
+    {
+      "userId": 7,
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "items": [
+        {
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 1,
+          "note": ""
+        },
+        {
+          "name": "Phở tái nạm",
+          "price": "65.000đ",
+          "priceNum": 65000,
+          "image": "",
+          "quantity": 1,
+          "note": ""
+        }
+      ],
+      "updatedAt": "2026-10-14T06:26:46.133Z"
+    }
+  ],
+  "emailVerifications": {
+    "manhtoanhp07@gmail.com": {
+      "otpHash": null,
+      "expiresAt": null,
+      "attempts": 0,
+      "lastSentAt": 1791957400270,
+      "verified": true,
+      "verificationToken": "944a131898f9ef298d0889da5b3ee0582138b2f3f60be619ac889ca957cfa5c5",
+      "tokenExpiresAt": 1791959215290,
+      "verifiedAt": "2026-10-14T05:56:55.290Z",
+      "updatedAt": "2026-10-14T05:56:55.290Z"
+    }
   }
 }

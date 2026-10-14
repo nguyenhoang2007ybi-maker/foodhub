@@ -458,7 +458,13 @@ function renderMenu(menuItems) {
   }
 
   container.innerHTML = '';
-  menuItems.forEach(item => {
+  menuItems.forEach((item, index) => {
+    // Chuẩn hóa món ăn: bảo đảm mỗi món luôn có id ổn định để thao tác giỏ hàng.
+    // Nếu dữ liệu thực đơn không có id, dùng chỉ mục trong menu làm id.
+    const dish = {
+      ...item,
+      id: (item.id !== undefined && item.id !== null) ? item.id : index
+    };
     const el = document.createElement('div');
     const isOutOfStock = item.isAvailable === false;
     el.className = 'flex items-center gap-3 p-3.5 rounded-2xl bg-surface-container-low border border-surface-container-high hover:border-primary-container/40 hover:shadow-sm transition-all group';
@@ -476,7 +482,7 @@ function renderMenu(menuItems) {
         ${isOutOfStock ? `
           <span class="px-2.5 py-1 text-[11px] font-semibold text-secondary/60 bg-surface-container-high rounded-lg cursor-not-allowed">Hết hàng</span>
         ` : `
-          <button type="button" class="add-to-cart-btn h-8 px-3 rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95" data-dish-id="${item.id}">
+          <button type="button" class="add-to-cart-btn h-8 px-3 rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95" data-dish-id="${dish.id}">
             <span class="material-symbols-outlined text-[16px]">add_shopping_cart</span>
             <span class="hidden sm:inline">Thêm</span>
           </button>
@@ -488,9 +494,9 @@ function renderMenu(menuItems) {
     if (addBtn) {
       addBtn.addEventListener('click', () => {
         if (!currentRestaurant) return;
-        const res = addToCart(item, currentRestaurant, 1);
+        const res = addToCart(dish, currentRestaurant, 1);
         if (res.conflict) {
-          pendingConflictItem = item;
+          pendingConflictItem = dish;
           const curRestEl = document.getElementById('conflict-current-restaurant');
           const newRestEl = document.getElementById('conflict-new-restaurant');
           if (curRestEl) curRestEl.textContent = res.currentRestaurant.name;
