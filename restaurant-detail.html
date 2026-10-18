@@ -132,9 +132,31 @@
                 <span id="rest-phone">0901234567</span>
               </div>
             </div>
+
+            <!-- Google Maps Embed (Chỉ nhúng trên trang chi tiết quán ăn) -->
+            <div id="rest-map-container" class="mt-5 pt-4 border-t border-surface-container-high">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold text-on-surface flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-primary text-[18px]">map</span>
+                  Vị trí trên Google Maps
+                </span>
+                <a id="rest-map-external-link" href="#" target="_blank" rel="noopener noreferrer" class="text-[11px] font-semibold text-primary hover:underline inline-flex items-center gap-0.5" title="Mở trên ứng dụng Google Maps">
+                  <span>Mở Google Maps</span>
+                  <span class="material-symbols-outlined text-[13px]">open_in_new</span>
+                </a>
+              </div>
+              <div class="w-full h-44 sm:h-48 rounded-2xl overflow-hidden border border-surface-container-high bg-surface-container-low relative shadow-inner">
+                <iframe id="rest-map-iframe" class="w-full h-full border-0" style="width:100%;height:100%;border:0;" width="100%" height="100%" loading="lazy" allowfullscreen referrerpolicy="no-referrer-when-downgrade" title="Bản đồ vị trí quán ăn"></iframe>
+                <div id="rest-map-fallback" class="hidden absolute inset-0 flex flex-col items-center justify-center p-3 text-center bg-surface-container-low text-secondary text-xs">
+                  <span class="material-symbols-outlined text-2xl text-secondary/40 mb-1">location_off</span>
+                  <p class="font-medium text-on-surface">Chưa có thông tin vị trí</p>
+                  <p class="text-[11px] text-secondary mt-0.5">Vui lòng liên hệ quán theo hotline để được hỗ trợ đường đi.</p>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="mt-8 pt-4 border-t border-surface-container-high flex flex-col gap-2.5">
+          <div class="mt-6 pt-4 border-t border-surface-container-high flex flex-col gap-2.5">
             <button id="open-review-modal-btn" type="button" class="w-full h-11 rounded-xl bg-primary-container hover:bg-primary text-on-primary font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer">
               <span class="material-symbols-outlined text-[18px]">rate_review</span>
               <span>Viết đánh giá của bạn</span>
@@ -230,6 +252,10 @@
             placeholder="Chia sẻ về hương vị món ăn, không gian, phong cách phục vụ, giá cả..."
             class="w-full p-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container focus:bg-surface-container-lowest transition-all"
           ></textarea>
+          <div class="mt-2 flex items-center gap-1.5 text-[11px] text-secondary">
+            <span class="material-symbols-outlined text-[15px] text-amber-600">info</span>
+            <span>Bình luận sẽ được quản trị viên duyệt trước khi hiển thị công khai.</span>
+          </div>
         </div>
 
         <!-- Submit Button -->
@@ -242,6 +268,28 @@
           </button>
         </div>
       </form>
+    </div>
+  </div>
+
+  <!-- CONFLICT RESTAURANT CART MODAL -->
+  <div id="cart-conflict-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container-lowest rounded-3xl max-w-md w-full p-6 shadow-2xl border border-surface-container-high animate-in fade-in zoom-in-95">
+      <div class="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-4">
+        <span class="material-symbols-outlined text-[28px]">swap_horiz</span>
+      </div>
+      <h3 class="text-base font-bold text-on-surface mb-2">Tạo đơn từ quán khác?</h3>
+      <p class="text-xs text-secondary leading-relaxed mb-4">
+        Giỏ hàng của bạn đang có món của quán <strong id="conflict-current-restaurant" class="text-on-surface"></strong>.
+        Mỗi đơn hàng chỉ áp dụng cho một quán duy nhất. Bạn có muốn làm mới giỏ hàng để đặt món từ quán <strong id="conflict-new-restaurant" class="text-primary"></strong> không?
+      </p>
+      <div class="flex items-center justify-end gap-3">
+        <button id="cancel-conflict-btn" type="button" class="h-10 px-4 rounded-xl text-xs font-semibold text-secondary hover:bg-surface-container-low transition-colors">
+          Giữ giỏ hiện tại
+        </button>
+        <button id="confirm-conflict-btn" type="button" class="h-10 px-5 rounded-xl bg-primary text-white font-bold text-xs shadow-sm hover:bg-primary-container transition-all">
+          Tạo giỏ hàng mới
+        </button>
+      </div>
     </div>
   </div>
 

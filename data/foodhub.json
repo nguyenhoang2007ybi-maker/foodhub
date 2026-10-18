@@ -67,17 +67,6 @@
       "status": "active",
       "avatar": "https://ui-avatars.com/api/?name=kdnvdgf&background=ff6b35&color=fff",
       "createdAt": "2026-10-05T05:38:29.154Z"
-    },
-    {
-      "id": 7,
-      "name": "nguyen van dmm",
-      "email": "nguyenhoang2007ybi@gmail.com",
-      "phone": "0766188015",
-      "passwordHash": "$2b$10$586W054MRv9Rk0kveX7uJuIKoLGw6dIjXuCx8S8HM7XjyIAqt6Bda",
-      "role": "customer",
-      "status": "active",
-      "avatar": "https://ui-avatars.com/api/?name=nguyen%20van%20a&background=ff6b35&color=fff",
-      "createdAt": "2026-10-09T09:29:12.029Z"
     }
   ],
   "restaurants": [
@@ -121,8 +110,8 @@
       "description": "Phở Thìn Lò Đúc nổi tiếng hơn 40 năm với món phở bò tái lăn nước dùng béo ngậy, thịt bò xào lửa lớn cùng nhiều hành lá tươi ngọt thanh.",
       "openingHours": "06:00 - 21:00",
       "phone": "024 3821 2709",
-      "rating": 4.8,
-      "reviewsCount": 3,
+      "rating": 4.9,
+      "reviewsCount": 4,
       "featured": true,
       "menu": [
         {
@@ -191,7 +180,7 @@
       "id": 3,
       "name": "Phở Gia Truyền Bát Đàn",
       "category": "Phở",
-      "address": "49 Bát Đàn, Quận Hoàn Kiếm, Hà Nội",
+      "address": "49 Bát Đàn, Hoàn Kiếm, Hà Nội",
       "area": "Hoàn Kiếm, Hà Nội",
       "price": "50.000đ - 70.000đ",
       "minPrice": 50000,
@@ -279,8 +268,8 @@
       "description": "Thiên đường lẩu nấm thượng hạng với hơn 30 loại nấm quý tự nhiên nhập khẩu từ Nhật Bản, Hàn Quốc và Vân Nam. Nước lẩu ninh xương gà và thảo mộc thanh ngọt tự nhiên tốt cho sức khỏe.",
       "openingHours": "11:00 - 14:00 & 17:30 - 22:00",
       "phone": "024 7300 7318",
-      "rating": 5,
-      "reviewsCount": 1,
+      "rating": 4.6,
+      "reviewsCount": 0,
       "featured": true,
       "menu": [
         {
@@ -592,12 +581,12 @@
     },
     {
       "id": 10,
-      "restaurantId": 5,
-      "userId": 7,
-      "userName": "nguyen van dmm",
-      "userAvatar": "https://ui-avatars.com/api/?name=nguyen%20van%20a&background=ff6b35&color=fff",
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
       "rating": 5,
-      "content": "k ngon",
+      "content": "Món ăn tại đây cực kỳ xuất sắc, phục vụ chu đáo tận tình!",
       "images": [],
       "status": "approved",
       "date": "2026-10-09",
@@ -641,6 +630,12 @@
       "userId": 1,
       "restaurantId": 3,
       "createdAt": "2026-10-05T05:55:44.905Z"
+    },
+    {
+      "id": 10,
+      "userId": 2,
+      "restaurantId": 1,
+      "createdAt": "2026-10-09T06:20:57.442Z"
     }
   ],
   "settings": {

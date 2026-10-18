@@ -1,6 +1,7 @@
 // FoodHub Authentication & Layout Helpers
 import { api } from './api.js';
 import { toast } from './toast.js';
+import { updateCartBadge, loadCartFromServer } from './cart.js';
 
 export function getToken() {
   return localStorage.getItem('foodhub_token');
@@ -103,6 +104,11 @@ export function initHeader(activeNav = '') {
             <span>Yêu thích</span>
             <span id="header-fav-count" class="inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold bg-primary-container text-on-primary rounded-full min-w-[20px] text-center leading-none">0</span>
           </a>
+          <a class="text-sm font-semibold ${getActiveCls('cart')} relative flex items-center gap-1.5" href="/cart.html">
+            <span class="material-symbols-outlined text-[18px]">shopping_bag</span>
+            <span>Giỏ hàng</span>
+            <span id="header-cart-count" class="header-cart-badge inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold bg-primary text-white rounded-full min-w-[20px] text-center leading-none">0</span>
+          </a>
           ${adminRole ? `<a class="text-sm font-semibold ${getActiveCls('admin')} text-amber-600 hover:text-amber-700 flex items-center gap-1" href="/admin.html"><span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>Quản trị</a>` : ''}
         </nav>
       </div>
@@ -162,6 +168,14 @@ export function initHeader(activeNav = '') {
                   <span class="material-symbols-outlined text-[18px] text-secondary">favorite</span>
                   <span>Quán đã lưu</span>
                 </a>
+                <a href="/cart.html" class="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low transition-colors">
+                  <span class="material-symbols-outlined text-[18px] text-secondary">shopping_bag</span>
+                  <span>Giỏ hàng</span>
+                </a>
+                <a href="/cart.html#orders" class="flex items-center gap-2.5 px-4 py-2 text-xs font-medium text-on-surface hover:bg-surface-container-low transition-colors">
+                  <span class="material-symbols-outlined text-[18px] text-secondary">receipt_long</span>
+                  <span>Đơn hàng của tôi</span>
+                </a>
                 ${adminRole ? `
                   <a href="/admin.html" class="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 transition-colors">
                     <span class="material-symbols-outlined text-[18px]">admin_panel_settings</span>
@@ -209,6 +223,10 @@ export function initHeader(activeNav = '') {
         <span>Yêu thích</span>
         <span class="px-2 py-0.5 text-xs bg-primary-container text-on-primary rounded-full">0</span>
       </a>
+      <a class="px-3 py-2 rounded-lg text-sm font-semibold hover:bg-surface-container-low ${activeNav === 'cart' ? 'text-primary bg-primary/10' : 'text-on-surface'} flex items-center justify-between" href="/cart.html">
+        <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">shopping_bag</span>Giỏ hàng</span>
+        <span id="mobile-cart-count" class="header-cart-badge px-2 py-0.5 text-xs bg-primary text-white rounded-full">0</span>
+      </a>
       ${adminRole ? `<a class="px-3 py-2 rounded-lg text-sm font-bold text-amber-600 hover:bg-amber-50" href="/admin.html">Quản trị Website</a>` : ''}
     </div>
   `;
@@ -244,8 +262,10 @@ export function initHeader(activeNav = '') {
     });
   }
 
-  // Tự động load số lượng favorites vào badge
+  // Tự động load số lượng favorites và cart vào badge
   updateFavoritesBadge();
+  updateCartBadge();
+  loadCartFromServer();
 }
 
 // Khởi tạo Footer chuẩn

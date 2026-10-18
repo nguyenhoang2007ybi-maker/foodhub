@@ -9,6 +9,8 @@ import restaurantRoutes from './routes/restaurants.js';
 import categoryRoutes from './routes/categories.js';
 import reviewRoutes from './routes/reviews.js';
 import favoriteRoutes from './routes/favorites.js';
+import cartRoutes from './routes/cart.js';
+import orderRoutes from './routes/orders.js';
 import adminRoutes from './routes/admin.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -50,6 +52,8 @@ app.use('/api/restaurants', restaurantRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/favorites', favoriteRoutes);
+app.use('/api/cart', cartRoutes);
+app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
 
 // Fallback 404 cho các route /api không tồn tại (Express 5 safe)

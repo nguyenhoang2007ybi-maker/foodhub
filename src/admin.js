@@ -100,29 +100,32 @@ function setupNavigation() {
   const navCategories = document.getElementById('nav-categories');
   const navUsers = document.getElementById('nav-users');
   const navReviews = document.getElementById('nav-reviews');
+  const navOrders = document.getElementById('nav-orders');
 
   const secDashboard = document.getElementById('section-dashboard');
   const secRestaurants = document.getElementById('section-restaurants');
   const secCategories = document.getElementById('section-categories');
   const secUsers = document.getElementById('section-users');
   const secReviews = document.getElementById('section-reviews');
+  const secOrders = document.getElementById('section-orders');
 
   const tabs = [
     { btn: navDashboard, sec: secDashboard, load: loadDashboardStats },
     { btn: navRestaurants, sec: secRestaurants, load: loadRestaurantsManager },
     { btn: navCategories, sec: secCategories, load: loadCategoriesManager },
     { btn: navUsers, sec: secUsers, load: loadUsersManager },
-    { btn: navReviews, sec: secReviews, load: loadReviewsManager }
+    { btn: navReviews, sec: secReviews, load: loadReviewsManager },
+    { btn: navOrders, sec: secOrders, load: loadOrdersManager }
   ];
 
   tabs.forEach(({ btn, sec, load }) => {
-    btn.addEventListener('click', () => {
+    btn?.addEventListener('click', () => {
       tabs.forEach(t => {
-        t.btn.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low transition-all text-left';
+        t.btn.className = 'w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low transition-all text-left';
         t.sec.classList.add('hidden');
       });
 
-      btn.className = 'w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-xs font-bold transition-all bg-primary-container text-on-primary shadow-sm text-left';
+      btn.className = 'w-full flex items-center justify-between px-4 py-3 rounded-2xl text-xs font-bold transition-all bg-primary-container text-on-primary shadow-sm text-left';
       sec.classList.remove('hidden');
 
       if (load) load();
@@ -144,6 +147,34 @@ async function loadDashboardStats() {
     document.getElementById('stat-total-restaurants').textContent = stats.totalRestaurants || 0;
     document.getElementById('stat-total-reviews').textContent = stats.totalReviews || 0;
     document.getElementById('stat-total-categories').textContent = stats.totalCategories || 0;
+
+    const navPendingBadge = document.getElementById('nav-pending-badge');
+    if (navPendingBadge) {
+      if (stats.pendingReviews > 0) {
+        navPendingBadge.textContent = stats.pendingReviews;
+        navPendingBadge.classList.remove('hidden');
+      } else {
+        navPendingBadge.classList.add('hidden');
+      }
+    }
+
+    // Tải thống kê đơn hàng để cập nhật badge sidebar
+    try {
+      const orderStatsRes = await api.get('/orders/admin/stats');
+      if (orderStatsRes && orderStatsRes.success && orderStatsRes.data) {
+        const orderBadge = document.getElementById('nav-orders-badge');
+        if (orderBadge) {
+          if (orderStatsRes.data.pending > 0) {
+            orderBadge.textContent = orderStatsRes.data.pending;
+            orderBadge.classList.remove('hidden');
+          } else {
+            orderBadge.classList.add('hidden');
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Lỗi lấy thống kê đơn cho badge:', e);
+    }
 
     // Rating breakdown bars
     const ratingBars = document.getElementById('rating-bars-container');
@@ -301,9 +332,23 @@ function renderRestaurantsTable(list) {
       <td class="p-4">
         <div class="flex items-center gap-3">
           <img src="${r.image || 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=100&q=80'}" class="w-12 h-12 rounded-xl object-cover flex-shrink-0" />
-          <div>
-            <h4 class="font-bold text-xs text-on-surface">${r.name}</h4>
-            <p class="text-[11px] text-secondary truncate max-w-xs">${r.address}</p>
+          <div class="min-w-0">
+            <h4 class="font-bold text-xs text-on-surface truncate">${escapeHtml(r.name)}</h4>
+            <p class="text-[11px] text-secondary truncate max-w-xs flex items-center gap-1 mt-0.5" title="${escapeHtml(r.address)}">
+              <span class="material-symbols-outlined text-[13px] text-primary flex-shrink-0">location_on</span>
+              <span class="truncate">${escapeHtml(r.address)}</span>
+            </p>
+            ${r.mapUrl ? `
+              <span class="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-semibold mt-1" title="Đã có link Google Maps riêng">
+                <span class="material-symbols-outlined text-[12px]">map</span>
+                <span>Bản đồ riêng</span>
+              </span>
+            ` : `
+              <span class="inline-flex items-center gap-1 text-[10px] text-secondary bg-surface-container-low px-1.5 py-0.2 rounded font-medium mt-1" title="Bản đồ tự động theo tên và địa chỉ">
+                <span class="material-symbols-outlined text-[12px]">explore</span>
+                <span>Bản đồ tự động</span>
+              </span>
+            `}
           </div>
         </div>
       </td>
@@ -321,10 +366,13 @@ function renderRestaurantsTable(list) {
       </td>
       <td class="p-4 text-right">
         <div class="flex items-center justify-end gap-1">
-          <button class="edit-rest-btn p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary-container/10 transition-colors" data-id="${r.id}" title="Sửa">
+          <a href="/restaurant-detail.html?id=${r.id}" target="_blank" class="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary-container/10 transition-colors" title="Xem chi tiết & bản đồ quán trên website">
+            <span class="material-symbols-outlined text-[18px]">open_in_new</span>
+          </a>
+          <button class="edit-rest-btn p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary-container/10 transition-colors" data-id="${r.id}" title="Sửa thông tin & vị trí bản đồ">
             <span class="material-symbols-outlined text-[18px]">edit</span>
           </button>
-          <button class="del-rest-btn p-1.5 rounded-lg text-secondary hover:text-rose-600 hover:bg-rose-50 transition-colors" data-id="${r.id}" title="Xóa">
+          <button class="del-rest-btn p-1.5 rounded-lg text-secondary hover:text-rose-600 hover:bg-rose-50 transition-colors" data-id="${r.id}" title="Xóa quán">
             <span class="material-symbols-outlined text-[18px]">delete</span>
           </button>
         </div>
@@ -493,6 +541,7 @@ function openRestaurantModal(restaurant = null) {
   const phoneInput = document.getElementById('modal-rest-phone');
   const imgInput = document.getElementById('modal-rest-image');
   const descInput = document.getElementById('modal-rest-desc');
+  const mapUrlInput = document.getElementById('modal-rest-map-url');
 
   populateTimeSelects();
   setupHoursControls();
@@ -510,6 +559,7 @@ function openRestaurantModal(restaurant = null) {
     phoneInput.value = restaurant.phone || '';
     imgInput.value = restaurant.image || '';
     descInput.value = restaurant.description || '';
+    if (mapUrlInput) mapUrlInput.value = restaurant.mapUrl || '';
     applyHoursToForm(restaurant);
   } else {
     title.textContent = 'Thêm Quán Ăn Mới';
@@ -522,6 +572,7 @@ function openRestaurantModal(restaurant = null) {
     phoneInput.value = '0901234567';
     imgInput.value = 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80';
     descInput.value = '';
+    if (mapUrlInput) mapUrlInput.value = '';
     applyHoursToForm(null);
   }
 
@@ -570,7 +621,8 @@ function setupRestaurantModalEvents() {
         price: document.getElementById('modal-rest-price').value.trim(),
         phone: document.getElementById('modal-rest-phone').value.trim(),
         image: document.getElementById('modal-rest-image').value.trim(),
-        description: document.getElementById('modal-rest-desc').value.trim()
+        description: document.getElementById('modal-rest-desc').value.trim(),
+        mapUrl: (document.getElementById('modal-rest-map-url')?.value || '').trim()
       };
 
       if (!preserveLegacyHours) {
@@ -809,19 +861,168 @@ function renderUsersTable(users) {
 // ==========================================
 // 5. REVIEWS MODERATION
 // ==========================================
+let cachedReviews = [];
+let currentReviewFilter = 'all';
+let currentReviewSearch = '';
+let reviewsInitialized = false;
+
+function formatReviewDateTime(iso) {
+  if (!iso) return 'Gần đây';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const two = (n) => String(n).padStart(2, '0');
+  return `${two(d.getDate())}/${two(d.getMonth() + 1)}/${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`;
+}
+
+function setupReviewsEvents() {
+  if (reviewsInitialized) return;
+  reviewsInitialized = true;
+
+  const refreshBtn = document.getElementById('refresh-reviews-btn');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', () => loadReviewsManager());
+  }
+
+  const searchInput = document.getElementById('admin-search-reviews');
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      currentReviewSearch = e.target.value.trim().toLowerCase();
+      filterAndRenderReviews();
+    });
+  }
+
+  const filterBtns = document.querySelectorAll('.rev-filter-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      currentReviewFilter = btn.dataset.filter || 'all';
+      updateFilterButtonsUI();
+      filterAndRenderReviews();
+    });
+  });
+}
+
+function updateFilterButtonsUI() {
+  const filterBtns = document.querySelectorAll('.rev-filter-btn');
+  filterBtns.forEach(btn => {
+    if (btn.dataset.filter === currentReviewFilter) {
+      btn.className = 'rev-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all bg-primary-container text-on-primary shadow-sm whitespace-nowrap cursor-pointer';
+    } else {
+      btn.className = 'rev-filter-btn px-3.5 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer';
+    }
+  });
+}
+
+function updateReviewCounts() {
+  const total = cachedReviews.length;
+  const pending = cachedReviews.filter(r => r.status === 'pending').length;
+  const approved = cachedReviews.filter(r => r.status === 'approved').length;
+  const rejected = cachedReviews.filter(r => r.status === 'rejected').length;
+
+  const countAll = document.getElementById('rev-filter-count-all');
+  const countPending = document.getElementById('rev-filter-count-pending');
+  const countApproved = document.getElementById('rev-filter-count-approved');
+  const countRejected = document.getElementById('rev-filter-count-rejected');
+  const navBadge = document.getElementById('nav-pending-badge');
+
+  if (countAll) countAll.textContent = `(${total})`;
+  if (countPending) countPending.textContent = pending;
+  if (countApproved) countApproved.textContent = approved;
+  if (countRejected) countRejected.textContent = rejected;
+
+  if (navBadge) {
+    if (pending > 0) {
+      navBadge.textContent = pending;
+      navBadge.classList.remove('hidden');
+    } else {
+      navBadge.classList.add('hidden');
+    }
+  }
+}
+
 async function loadReviewsManager() {
+  setupReviewsEvents();
   const tbody = document.getElementById('admin-reviews-tbody');
   if (!tbody) return;
 
-  tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-secondary">Đang tải danh sách đánh giá...</td></tr>`;
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="7" class="p-8 text-center text-secondary">
+        <div class="inline-flex items-center gap-2">
+          <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+          <span>Đang tải danh sách đánh giá...</span>
+        </div>
+      </td>
+    </tr>
+  `;
 
   try {
     const res = await api.get('/reviews/admin/all');
     if (res && res.success && Array.isArray(res.data)) {
-      renderReviewsTable(res.data);
+      cachedReviews = res.data;
+      updateReviewCounts();
+      filterAndRenderReviews();
+    } else {
+      tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-rose-500">Không tải được dữ liệu nhận xét.</td></tr>`;
     }
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-rose-500">Lỗi nạp đánh giá.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-rose-500">Lỗi nạp đánh giá: ${err.message || 'Lỗi kết nối'}</td></tr>`;
+  }
+}
+
+function filterAndRenderReviews() {
+  let list = [...cachedReviews];
+
+  if (currentReviewFilter !== 'all') {
+    list = list.filter(r => r.status === currentReviewFilter);
+  }
+
+  if (currentReviewSearch) {
+    list = list.filter(r => {
+      const inRest = (r.restaurantName || '').toLowerCase().includes(currentReviewSearch);
+      const inUser = (r.userName || '').toLowerCase().includes(currentReviewSearch);
+      const inContent = (r.content || '').toLowerCase().includes(currentReviewSearch);
+      return inRest || inUser || inContent;
+    });
+  }
+
+  renderReviewsTable(list);
+}
+
+async function updateReviewStatus(reviewId, newStatus) {
+  try {
+    const res = await api.patch(`/reviews/${reviewId}/status`, { status: newStatus });
+    if (res && res.success) {
+      if (newStatus === 'approved') {
+        toast.success('Đã duyệt bình luận! Bình luận hiện đã được hiển thị công khai trên website.');
+      } else if (newStatus === 'rejected') {
+        toast.info('Đã từ chối bình luận. Bình luận sẽ không hiển thị trên website.');
+      } else {
+        toast.success(`Đã cập nhật trạng thái bình luận sang "${newStatus}".`);
+      }
+
+      const item = cachedReviews.find(r => r.id === Number(reviewId));
+      if (item) item.status = newStatus;
+
+      updateReviewCounts();
+      filterAndRenderReviews();
+    }
+  } catch (err) {
+    toast.error(err.message || 'Lỗi khi cập nhật trạng thái bình luận.');
+  }
+}
+
+async function deleteReview(reviewId) {
+  if (!confirm('Bạn có chắc muốn xóa vĩnh viễn đánh giá này khỏi hệ thống? Thao tác này không thể hoàn tác!')) return;
+  try {
+    const res = await api.delete(`/reviews/${reviewId}`);
+    if (res && res.success) {
+      toast.success('Đã xóa đánh giá thành công.');
+      cachedReviews = cachedReviews.filter(r => r.id !== Number(reviewId));
+      updateReviewCounts();
+      filterAndRenderReviews();
+    }
+  } catch (err) {
+    toast.error(err.message || 'Lỗi khi xóa đánh giá.');
   }
 }
 
@@ -830,7 +1031,17 @@ function renderReviewsTable(reviews) {
   if (!tbody) return;
 
   if (reviews.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="6" class="p-8 text-center text-secondary">Không có đánh giá nào.</td></tr>`;
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="p-10 text-center text-secondary">
+          <div class="flex flex-col items-center justify-center">
+            <span class="material-symbols-outlined text-4xl text-secondary/30 mb-2">rate_review</span>
+            <p class="font-semibold text-on-surface text-xs">Không có đánh giá nào phù hợp với bộ lọc</p>
+            <p class="text-[11px] text-secondary mt-0.5">Thử chọn tab khác hoặc xóa từ khóa tìm kiếm</p>
+          </div>
+        </td>
+      </tr>
+    `;
     return;
   }
 
@@ -839,57 +1050,486 @@ function renderReviewsTable(reviews) {
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-surface-container-low transition-colors';
 
+    let statusBadge = '';
+    if (rev.status === 'approved') {
+      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Đã duyệt</span>`;
+    } else if (rev.status === 'pending') {
+      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Chờ duyệt</span>`;
+    } else if (rev.status === 'rejected') {
+      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Đã từ chối</span>`;
+    } else {
+      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-slate-100 text-slate-700 border border-slate-200"><span class="w-1.5 h-1.5 rounded-full bg-slate-500"></span>Đã ẩn</span>`;
+    }
+
+    const ratingNum = Math.round(Number(rev.rating) || 5);
+    let starsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+      starsHtml += `<span class="material-symbols-outlined text-[13px] ${i <= ratingNum ? 'text-amber-500' : 'text-secondary/30'}" style="${i <= ratingNum ? "font-variation-settings: 'FILL' 1;" : ''}">star</span>`;
+    }
+
     tr.innerHTML = `
-      <td class="p-4 font-bold text-on-surface">${rev.restaurantName || 'Quán ăn'}</td>
-      <td class="p-4">${rev.userName}</td>
       <td class="p-4">
-        <span class="inline-flex items-center gap-0.5 text-amber-600 font-bold">
-          <span>${rev.rating}</span>
-          <span class="material-symbols-outlined text-[13px]" style="font-variation-settings: 'FILL' 1;">star</span>
-        </span>
+        <a href="/restaurant-detail.html?id=${rev.restaurantId}" target="_blank" class="font-bold text-on-surface hover:text-primary transition-colors flex items-center gap-1.5" title="Mở trang quán ăn">
+          <span class="max-w-[180px] truncate">${escapeHtml(rev.restaurantName || 'Quán ăn')}</span>
+          <span class="material-symbols-outlined text-[14px] text-secondary">open_in_new</span>
+        </a>
+        <span class="block text-[11px] text-secondary mt-0.5">Mã quán: #${rev.restaurantId}</span>
       </td>
-      <td class="p-4 text-secondary max-w-sm truncate">${rev.content}</td>
+
       <td class="p-4">
-        <select class="rev-status-select bg-surface-container-low border border-surface-container rounded-lg px-2 py-1 text-xs font-semibold ${rev.status === 'approved' ? 'text-emerald-700 bg-emerald-50' : (rev.status === 'pending' ? 'text-amber-800 bg-amber-50' : 'text-secondary')}" data-id="${rev.id}">
-          <option value="approved" ${rev.status === 'approved' ? 'selected' : ''}>Đã duyệt</option>
-          <option value="pending" ${rev.status === 'pending' ? 'selected' : ''}>Chờ duyệt</option>
-          <option value="hidden" ${rev.status === 'hidden' ? 'selected' : ''}>Đã ẩn</option>
+        <div class="flex items-center gap-2.5">
+          <img src="${rev.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.userName || 'U')}&background=ff6b35&color=fff`}" class="w-8 h-8 rounded-full object-cover ring-1 ring-surface-container flex-shrink-0" />
+          <div class="min-w-0">
+            <span class="font-bold text-on-surface truncate block">${escapeHtml(rev.userName || 'Người dùng')}</span>
+            <span class="block text-[10px] text-secondary">UID: #${rev.userId || 'N/A'}</span>
+          </div>
+        </div>
+      </td>
+
+      <td class="p-4 whitespace-nowrap">
+        <div class="flex items-center gap-1">
+          <span class="font-black text-xs text-on-surface">${rev.rating}</span>
+          <div class="flex items-center">${starsHtml}</div>
+        </div>
+      </td>
+
+      <td class="p-4 text-on-surface-variant max-w-xs sm:max-w-md">
+        <p class="text-xs leading-relaxed line-clamp-3 hover:line-clamp-none transition-all">${escapeHtml(rev.content)}</p>
+        ${Array.isArray(rev.images) && rev.images.length > 0 ? `
+          <div class="flex gap-1.5 mt-2">
+            ${rev.images.slice(0, 3).map(img => `<img src="${img}" alt="Ảnh review" class="w-10 h-10 rounded-lg object-cover border border-surface-container" />`).join('')}
+          </div>
+        ` : ''}
+      </td>
+
+      <td class="p-4 text-secondary text-[11px] whitespace-nowrap">
+        ${formatReviewDateTime(rev.createdAt || rev.date)}
+      </td>
+
+      <td class="p-4 whitespace-nowrap">
+        ${statusBadge}
+      </td>
+
+      <td class="p-4 text-right whitespace-nowrap">
+        <div class="flex items-center justify-end gap-1.5">
+          ${rev.status !== 'approved' ? `
+            <button class="approve-rev-btn h-8 px-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[11px] inline-flex items-center gap-1 shadow-sm transition-all cursor-pointer" data-id="${rev.id}" title="Duyệt bình luận này để hiển thị công khai trên website">
+              <span class="material-symbols-outlined text-[15px]">check_circle</span>
+              <span>Duyệt</span>
+            </button>
+          ` : ''}
+
+          ${rev.status !== 'rejected' ? `
+            <button class="reject-rev-btn h-8 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-semibold text-[11px] inline-flex items-center gap-1 transition-all cursor-pointer" data-id="${rev.id}" title="Từ chối hiển thị bình luận này">
+              <span class="material-symbols-outlined text-[15px]">cancel</span>
+              <span>Từ chối</span>
+            </button>
+          ` : ''}
+
+          <select class="rev-status-select bg-surface-container-low border border-surface-container rounded-xl px-2 py-1 text-[11px] font-semibold text-on-surface focus:outline-none focus:border-primary-container" data-id="${rev.id}" title="Đổi trạng thái nhanh">
+            <option value="pending" ${rev.status === 'pending' ? 'selected' : ''}>Chờ duyệt</option>
+            <option value="approved" ${rev.status === 'approved' ? 'selected' : ''}>Đã duyệt</option>
+            <option value="rejected" ${rev.status === 'rejected' ? 'selected' : ''}>Từ chối</option>
+            <option value="hidden" ${rev.status === 'hidden' ? 'selected' : ''}>Đã ẩn</option>
+          </select>
+
+          <button class="del-review-btn text-secondary hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer" data-id="${rev.id}" title="Xóa vĩnh viễn bình luận">
+            <span class="material-symbols-outlined text-[18px]">delete</span>
+          </button>
+        </div>
+      </td>
+    `;
+
+    // Bind Approve button
+    const approveBtn = tr.querySelector('.approve-rev-btn');
+    if (approveBtn) {
+      approveBtn.onclick = () => updateReviewStatus(rev.id, 'approved');
+    }
+
+    // Bind Reject button
+    const rejectBtn = tr.querySelector('.reject-rev-btn');
+    if (rejectBtn) {
+      rejectBtn.onclick = () => updateReviewStatus(rev.id, 'rejected');
+    }
+
+    // Bind status dropdown change
+    const statusSelect = tr.querySelector('.rev-status-select');
+    if (statusSelect) {
+      statusSelect.onchange = (e) => updateReviewStatus(rev.id, e.target.value);
+    }
+
+    // Bind Delete button
+    const delBtn = tr.querySelector('.del-review-btn');
+    if (delBtn) {
+      delBtn.onclick = () => deleteReview(rev.id);
+    }
+
+    tbody.appendChild(tr);
+  });
+}
+
+// ==========================================
+// 6. ORDERS MANAGEMENT
+// ==========================================
+let cachedAdminOrders = [];
+let currentOrderFilter = 'all';
+
+const ORDER_STATUS_MAP = {
+  pending: { label: 'Chờ xác nhận', cls: 'bg-amber-100 text-amber-800 border-amber-300' },
+  confirmed: { label: 'Đã xác nhận', cls: 'bg-sky-100 text-sky-800 border-sky-300' },
+  preparing: { label: 'Đang nấu', cls: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+  shipping: { label: 'Đang giao', cls: 'bg-orange-100 text-orange-800 border-orange-300' },
+  completed: { label: 'Hoàn tất', cls: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+  cancelled: { label: 'Đã hủy', cls: 'bg-rose-100 text-rose-800 border-rose-300' }
+};
+
+function formatVNDOrder(val) {
+  return (Number(val) || 0).toLocaleString('vi-VN') + ' đ';
+}
+
+async function loadOrdersManager() {
+  setupOrderControls();
+  await refreshOrdersData();
+}
+
+let orderControlsBound = false;
+function setupOrderControls() {
+  if (orderControlsBound) return;
+  orderControlsBound = true;
+
+  // Refresh button
+  document.getElementById('admin-refresh-orders-btn')?.addEventListener('click', async () => {
+    await refreshOrdersData();
+    toast.info('Đã làm mới danh sách đơn hàng.');
+  });
+
+  // Filter buttons
+  const filterBtns = document.querySelectorAll('.order-filter-btn');
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => {
+        b.className = 'order-filter-btn px-3 py-1.5 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low cursor-pointer';
+      });
+      btn.className = 'order-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold bg-primary-container text-white cursor-pointer';
+      currentOrderFilter = btn.dataset.filter || 'all';
+      filterAndRenderAdminOrders();
+    });
+  });
+
+  // Search input
+  const searchInput = document.getElementById('admin-search-orders');
+  searchInput?.addEventListener('input', () => {
+    filterAndRenderAdminOrders();
+  });
+
+  // Close modal
+  document.getElementById('admin-order-modal-close')?.addEventListener('click', () => {
+    document.getElementById('admin-order-modal')?.classList.add('hidden');
+  });
+}
+
+async function refreshOrdersData() {
+  try {
+    // 1. Fetch stats
+    const statsRes = await api.get('/orders/admin/stats');
+    if (statsRes && statsRes.success && statsRes.data) {
+      const s = statsRes.data;
+      const totalEl = document.getElementById('admin-order-stat-total');
+      const pendingEl = document.getElementById('admin-order-stat-pending');
+      const shippingEl = document.getElementById('admin-order-stat-shipping');
+      const completedEl = document.getElementById('admin-order-stat-completed');
+      const revenueEl = document.getElementById('admin-order-stat-revenue');
+
+      if (totalEl) totalEl.textContent = s.total || 0;
+      if (pendingEl) pendingEl.textContent = s.pending || 0;
+      if (shippingEl) shippingEl.textContent = (s.confirmed || 0) + (s.preparing || 0) + (s.shipping || 0);
+      if (completedEl) completedEl.textContent = s.completed || 0;
+      if (revenueEl) revenueEl.textContent = formatVNDOrder(s.totalRevenue || 0);
+
+      const badge = document.getElementById('nav-orders-badge');
+      if (badge) {
+        if (s.pending > 0) {
+          badge.textContent = s.pending;
+          badge.classList.remove('hidden');
+        } else {
+          badge.classList.add('hidden');
+        }
+      }
+    }
+
+    // 2. Fetch all orders
+    const ordersRes = await api.get('/orders/admin/all');
+    if (ordersRes && ordersRes.success && Array.isArray(ordersRes.data)) {
+      cachedAdminOrders = ordersRes.data;
+      filterAndRenderAdminOrders();
+    }
+  } catch (err) {
+    console.error('Lỗi tải dữ liệu đơn hàng admin:', err);
+    toast.error('Lỗi khi tải danh sách đơn hàng.');
+  }
+}
+
+function filterAndRenderAdminOrders() {
+  const q = (document.getElementById('admin-search-orders')?.value || '').toLowerCase().trim();
+  let filtered = [...cachedAdminOrders];
+
+  if (currentOrderFilter !== 'all') {
+    filtered = filtered.filter(o => o.status === currentOrderFilter);
+  }
+
+  if (q) {
+    filtered = filtered.filter(o =>
+      (o.code && o.code.toLowerCase().includes(q)) ||
+      (o.recipientName && o.recipientName.toLowerCase().includes(q)) ||
+      (o.recipientPhone && o.recipientPhone.includes(q)) ||
+      (o.restaurantName && o.restaurantName.toLowerCase().includes(q))
+    );
+  }
+
+  renderAdminOrdersTable(filtered);
+}
+
+function renderAdminOrdersTable(orders) {
+  const tbody = document.getElementById('admin-orders-tbody');
+  if (!tbody) return;
+
+  if (orders.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="p-8 text-center text-secondary text-xs">
+          <span class="material-symbols-outlined text-3xl mb-1 text-secondary/40">inbox</span>
+          <p>Không tìm thấy đơn hàng nào phù hợp với bộ lọc hiện tại.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  orders.forEach(order => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-surface-container-low transition-colors';
+
+    const itemsSummary = (order.items || []).map(i => `${escapeHtml(i.name)} x${i.quantity}`).join(', ');
+
+    tr.innerHTML = `
+      <td class="p-4">
+        <p class="font-bold text-primary font-mono">${escapeHtml(order.code)}</p>
+        <p class="text-[11px] text-secondary mt-0.5">${formatDateAdmin(order.createdAt)}</p>
+      </td>
+
+      <td class="p-4">
+        <p class="font-bold text-on-surface">${escapeHtml(order.recipientName)}</p>
+        <p class="text-[11px] text-secondary">${escapeHtml(order.recipientPhone)}</p>
+        <p class="text-[11px] text-secondary truncate max-w-xs mt-0.5" title="${escapeHtml(order.deliveryAddress)}">${escapeHtml(order.deliveryAddress)}</p>
+      </td>
+
+      <td class="p-4">
+        <p class="font-bold text-on-surface">${escapeHtml(order.restaurantName)}</p>
+        <p class="text-[11px] text-secondary truncate max-w-[160px]">${escapeHtml(order.restaurantAddress || '')}</p>
+      </td>
+
+      <td class="p-4">
+        <p class="text-[11px] text-on-surface line-clamp-2 max-w-[180px]" title="${itemsSummary}">${itemsSummary}</p>
+        <p class="text-[10px] text-secondary mt-0.5 font-semibold">${order.totalItems || (order.items || []).reduce((a,c)=>a+c.quantity,0)} món</p>
+      </td>
+
+      <td class="p-4">
+        <p class="font-black text-on-surface">${formatVNDOrder(order.total)}</p>
+        <div class="mt-0.5 flex items-center gap-1">
+          <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${order.paymentStatus === 'paid' ? 'bg-emerald-100 text-emerald-800' : 'bg-surface-container text-secondary'}">
+            ${order.paymentStatus === 'paid' ? 'Đã TT' : 'Chưa TT (COD)'}
+          </span>
+        </div>
+      </td>
+
+      <td class="p-4">
+        <select class="admin-order-status-select h-8 px-2 rounded-lg text-xs font-bold border border-surface-container bg-surface-container-lowest focus:outline-none focus:border-primary-container cursor-pointer" data-order-id="${order.id}">
+          <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Chờ xác nhận</option>
+          <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Đã xác nhận</option>
+          <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Đang nấu món</option>
+          <option value="shipping" ${order.status === 'shipping' ? 'selected' : ''}>Đang giao hàng</option>
+          <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Hoàn tất</option>
+          <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Đã hủy</option>
         </select>
       </td>
+
       <td class="p-4 text-right">
-        <button class="del-review-btn text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition-colors" data-id="${rev.id}" title="Xóa nhận xét">
-          <span class="material-symbols-outlined text-[18px]">delete</span>
+        <button type="button" class="admin-view-order-btn px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold transition-all cursor-pointer">
+          Chi tiết
         </button>
       </td>
     `;
 
-    // Status change
-    const statusSelect = tr.querySelector('.rev-status-select');
-    statusSelect.onchange = async (e) => {
-      try {
-        const res = await api.patch(`/reviews/${rev.id}/status`, { status: e.target.value });
-        if (res && res.success) toast.success(`Đã cập nhật trạng thái: ${e.target.value}`);
-      } catch (err) {
-        toast.error('Lỗi khi cập nhật trạng thái nhận xét.');
-        loadReviewsManager();
-      }
-    };
+    // Bind change status
+    const select = tr.querySelector('.admin-order-status-select');
+    select?.addEventListener('change', async (e) => {
+      const newStatus = e.target.value;
+      await updateOrderStatusAdmin(order.id, newStatus);
+    });
 
-    // Delete review
-    const delBtn = tr.querySelector('.del-review-btn');
-    delBtn.onclick = async () => {
-      if (!confirm('Bạn có chắc muốn xóa vĩnh viễn đánh giá này?')) return;
-      try {
-        const res = await api.delete(`/reviews/${rev.id}`);
-        if (res && res.success) {
-          toast.success('Đã xóa đánh giá thành công.');
-          loadReviewsManager();
-        }
-      } catch (err) {
-        toast.error('Lỗi xóa đánh giá.');
-      }
-    };
+    // Bind view detail
+    tr.querySelector('.admin-view-order-btn')?.addEventListener('click', () => {
+      openAdminOrderDetailModal(order);
+    });
 
     tbody.appendChild(tr);
   });
+}
+
+async function updateOrderStatusAdmin(orderId, status, note = '') {
+  try {
+    const res = await api.patch(`/orders/${orderId}/status`, { status, note });
+    if (res && res.success) {
+      toast.success(res.message || 'Cập nhật trạng thái thành công.');
+      await refreshOrdersData();
+    } else {
+      toast.error(res?.message || 'Không thể cập nhật trạng thái đơn.');
+    }
+  } catch (err) {
+    console.error('Lỗi cập nhật trạng thái đơn:', err);
+    toast.error(err.message || 'Lỗi khi cập nhật trạng thái đơn.');
+  }
+}
+
+function openAdminOrderDetailModal(order) {
+  const modal = document.getElementById('admin-order-modal');
+  const codeEl = document.getElementById('admin-order-modal-code');
+  const bodyEl = document.getElementById('admin-order-modal-body');
+
+  if (codeEl) codeEl.textContent = order.code;
+  if (!bodyEl) return;
+
+  const statusMeta = ORDER_STATUS_MAP[order.status] || { label: order.status, cls: 'bg-gray-100 text-gray-800' };
+
+  bodyEl.innerHTML = `
+    <!-- Top summary -->
+    <div class="p-4 rounded-2xl border ${statusMeta.cls} flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+      <div>
+        <p class="text-xs font-medium">Trạng thái hiện tại:</p>
+        <p class="text-base font-black">${statusMeta.label}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-xs text-secondary">Tạo lúc: ${formatDateAdmin(order.createdAt)}</p>
+        <p class="text-xs text-secondary">Cập nhật: ${formatDateAdmin(order.updatedAt || order.createdAt)}</p>
+      </div>
+    </div>
+
+    <!-- Quick Update Status Form inside modal -->
+    <div class="p-4 bg-surface-container-low rounded-2xl border border-surface-container space-y-3">
+      <h4 class="text-xs font-bold text-on-surface uppercase tracking-wider">Cập nhật trạng thái đơn</h4>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div>
+          <label class="block text-[11px] font-bold text-secondary mb-1">Chọn trạng thái mới:</label>
+          <select id="modal-update-status-select" class="w-full h-9 px-3 bg-surface-container-lowest border border-surface-container rounded-xl text-xs font-bold focus:outline-none focus:border-primary-container">
+            <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Chờ xác nhận</option>
+            <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Đã xác nhận</option>
+            <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Đang nấu món</option>
+            <option value="shipping" ${order.status === 'shipping' ? 'selected' : ''}>Đang giao hàng</option>
+            <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Hoàn tất</option>
+            <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Đã hủy</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-secondary mb-1">Ghi chú trạng thái (Tùy chọn):</label>
+          <input id="modal-update-status-note" type="text" placeholder="Ví dụ: Đang đợi shipper đến lấy..." class="w-full h-9 px-3 bg-surface-container-lowest border border-surface-container rounded-xl text-xs focus:outline-none focus:border-primary-container" />
+        </div>
+      </div>
+      <button id="modal-submit-status-btn" type="button" class="px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold transition-all cursor-pointer">
+        Lưu cập nhật trạng thái
+      </button>
+    </div>
+
+    <!-- Customer & Delivery -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs bg-surface-container-low p-4 rounded-2xl">
+      <div>
+        <p class="text-secondary font-medium">Người nhận hàng:</p>
+        <p class="font-bold text-on-surface mt-0.5">${escapeHtml(order.recipientName)} - ${escapeHtml(order.recipientPhone)}</p>
+        <p class="text-secondary font-medium mt-2">Tài khoản đặt đơn:</p>
+        <p class="text-on-surface mt-0.5">${escapeHtml(order.userName || 'Khách')} (${escapeHtml(order.userEmail || '')})</p>
+        <p class="text-secondary font-medium mt-2">Địa chỉ giao hàng:</p>
+        <p class="font-semibold text-on-surface mt-0.5">${escapeHtml(order.deliveryAddress)}</p>
+      </div>
+      <div>
+        <p class="text-secondary font-medium">Quán ăn:</p>
+        <p class="font-bold text-on-surface mt-0.5">${escapeHtml(order.restaurantName)}</p>
+        <p class="text-secondary mt-0.5">${escapeHtml(order.restaurantAddress || '')}</p>
+        <p class="text-secondary font-medium mt-2">Ghi chú khách hàng:</p>
+        <p class="text-on-surface mt-0.5 italic">${escapeHtml(order.note || 'Không có ghi chú')}</p>
+        <p class="text-secondary font-medium mt-2">Phương thức thanh toán:</p>
+        <p class="font-bold text-on-surface mt-0.5">${order.paymentMethod} (${order.paymentStatus === 'paid' ? 'Đã thanh toán' : 'Chưa thanh toán'})</p>
+      </div>
+    </div>
+
+    <!-- Items breakdown -->
+    <div>
+      <h4 class="text-xs font-bold text-on-surface uppercase tracking-wider mb-2">Chi tiết món ăn</h4>
+      <div class="divide-y divide-surface-container bg-surface-container-low rounded-2xl p-4">
+        ${(order.items || []).map(i => `
+          <div class="py-2 flex items-center justify-between text-xs">
+            <div>
+              <p class="font-bold text-on-surface">${escapeHtml(i.name)} <span class="text-secondary font-normal">x${i.quantity}</span></p>
+              ${i.note ? `<p class="text-[11px] text-secondary mt-0.5">Ghi chú: ${escapeHtml(i.note)}</p>` : ''}
+            </div>
+            <span class="font-bold text-primary">${formatVNDOrder(i.total || i.priceNum * i.quantity)}</span>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Timeline history -->
+    <div>
+      <h4 class="text-xs font-bold text-on-surface uppercase tracking-wider mb-2">Nhật ký tiến trình</h4>
+      <div class="space-y-2 pl-2 border-l-2 border-primary/30 ml-2">
+        ${(order.timeline || []).map(tl => `
+          <div class="relative pl-3 text-xs">
+            <div class="absolute -left-[17px] top-1 w-2.5 h-2.5 rounded-full bg-primary"></div>
+            <p class="font-bold text-on-surface">${escapeHtml(tl.message || tl.status)}</p>
+            <p class="text-[11px] text-secondary mt-0.5">${formatDateAdmin(tl.time)}</p>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Cost summary -->
+    <div class="space-y-1.5 pt-3 border-t border-surface-container text-xs">
+      <div class="flex justify-between text-secondary">
+        <span>Tạm tính:</span>
+        <span class="font-bold text-on-surface">${formatVNDOrder(order.subtotal)}</span>
+      </div>
+      <div class="flex justify-between text-secondary">
+        <span>Phí giao hàng:</span>
+        <span class="font-bold text-on-surface">${order.shippingFee === 0 ? 'Miễn phí' : formatVNDOrder(order.shippingFee)}</span>
+      </div>
+      ${order.discount > 0 ? `
+        <div class="flex justify-between text-emerald-600 font-bold">
+          <span>Ưu đãi (${escapeHtml(order.couponCode || 'Giảm giá')}):</span>
+          <span>-${formatVNDOrder(order.discount)}</span>
+        </div>
+      ` : ''}
+      <div class="flex justify-between text-base font-bold text-on-surface pt-2 border-t border-surface-container">
+        <span>Tổng thanh toán:</span>
+        <span class="text-primary font-black">${formatVNDOrder(order.total)}</span>
+      </div>
+    </div>
+  `;
+
+  // Bind modal submit
+  document.getElementById('modal-submit-status-btn')?.addEventListener('click', async () => {
+    const sel = document.getElementById('modal-update-status-select');
+    const noteInput = document.getElementById('modal-update-status-note');
+    if (!sel) return;
+    await updateOrderStatusAdmin(order.id, sel.value, noteInput?.value.trim());
+    modal?.classList.add('hidden');
+  });
+
+  modal?.classList.remove('hidden');
+}
+
+function formatDateAdmin(iso) {
+  if (!iso) return 'Gần đây';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const two = n => String(n).padStart(2, '0');
+  return `${two(d.getDate())}/${two(d.getMonth() + 1)}/${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`;
 }

@@ -211,7 +211,8 @@ router.post('/', authenticateToken, requireAdmin, (req, res) => {
       openingHours,
       phone,
       menu,
-      featured
+      featured,
+      mapUrl
     } = req.body;
 
     if (!name || !name.trim()) {
@@ -253,6 +254,7 @@ router.post('/', authenticateToken, requireAdmin, (req, res) => {
       reviewsCount: 0,
       menu: Array.isArray(menu) ? menu : [],
       featured: Boolean(featured),
+      mapUrl: mapUrl ? String(mapUrl).trim() : '',
       createdAt: new Date().toISOString()
     };
 
@@ -294,7 +296,8 @@ router.put('/:id', authenticateToken, requireAdmin, (req, res) => {
       openingHours,
       phone,
       menu,
-      featured
+      featured,
+      mapUrl
     } = req.body;
 
     const hours = resolveHours(req.body);
@@ -318,6 +321,7 @@ router.put('/:id', authenticateToken, requireAdmin, (req, res) => {
     if (phone !== undefined && phone !== null) existing.phone = String(phone).trim();
     if (menu !== undefined) existing.menu = menu;
     if (featured !== undefined) existing.featured = Boolean(featured);
+    if (mapUrl !== undefined) existing.mapUrl = String(mapUrl || '').trim();
 
     // Cập nhật giờ mở/đóng cửa theo dữ liệu mới (chỉ khi client có gửi lên)
     if (hours) {

@@ -199,11 +199,23 @@ async function loadMyReviews() {
           starsHtml += `<span class="material-symbols-outlined text-[15px] ${i <= rev.rating ? 'text-amber-500' : 'text-secondary/30'}" style="${i <= rev.rating ? "font-variation-settings: 'FILL' 1;" : ''}">star</span>`;
         }
 
+        let statusBadge = '';
+        if (rev.status === 'approved') {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Đã duyệt</span>';
+        } else if (rev.status === 'pending') {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Chờ duyệt</span>';
+        } else if (rev.status === 'rejected') {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">Từ chối</span>';
+        } else {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">Đã ẩn</span>';
+        }
+
         item.innerHTML = `
           <div class="flex items-center justify-between">
             <div class="flex items-center gap-2">
               <span class="text-xs font-bold text-on-surface">${rev.restaurantName || 'Quán ăn'}</span>
               <div class="flex items-center">${starsHtml}</div>
+              ${statusBadge}
             </div>
             <div class="flex items-center gap-2">
               <span class="text-[11px] text-secondary">${rev.date || 'Gần đây'}</span>
