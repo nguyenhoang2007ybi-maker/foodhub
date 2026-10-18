@@ -371,5 +371,223 @@ router.delete('/:id', authenticateToken, requireAdmin, (req, res) => {
   }
 });
 
+// ==========================================
+// 6. QUẢN LÝ THỰC ĐƠN (MENU MANAGEMENT)
+// ==========================================
+
+// 6.1 Lấy thực đơn của quán ăn
+// GET /api/restaurants/:id/menu
+router.get('/:id/menu', (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const db = getDb();
+    const restaurant = db.restaurants.find(r => r.id === id);
+
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy quán ăn.' });
+    }
+
+    res.json({
+      success: true,
+      data: Array.isArray(restaurant.menu) ? restaurant.menu : [],
+      restaurantName: restaurant.name,
+      restaurantId: restaurant.id
+    });
+  } catch (error) {
+    console.error('Lỗi lấy thực đơn:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi tải thực đơn.' });
+  }
+});
+
+// 6.2 Thêm món ăn mới vào thực đơn (Admin only)
+// POST /api/restaurants/:id/menu
+router.post('/:id/menu', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const db = getDb();
+    const restaurant = db.restaurants.find(r => r.id === id);
+
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy quán ăn để thêm món.' });
+    }
+
+    if (!Array.isArray(restaurant.menu)) {
+      restaurant.menu = [];
+    }
+
+    const { name, price, priceNum, description, image, category, isAvailable } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ success: false, message: 'Tên món ăn không được để trống.' });
+    }
+
+    const numericPrice = Number(priceNum) || parsePrice(price) || 30000;
+    const formattedPrice = price ? String(price).trim() : (numericPrice.toLocaleString('vi-VN') + 'đ');
+
+    // Tìm ID mới cho món ăn
+    let maxDishId = 0;
+    db.restaurants.forEach(r => {
+      if (Array.isArray(r.menu)) {
+        r.menu.forEach(m => {
+          if (m.id > maxDishId) maxDishId = m.id;
+        });
+      }
+    });
+    const newDishId = maxDishId > 0 ? maxDishId + 1 : (id * 100 + 1);
+
+    const availableStatus = isAvailable !== undefined ? Boolean(isAvailable) : true;
+
+    const newDish = {
+      id: newDishId,
+      name: name.trim(),
+      price: formattedPrice,
+      priceNum: numericPrice,
+      description: description ? description.trim() : name.trim(),
+      image: image ? image.trim() : 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=400&q=80',
+      category: category ? category.trim() : 'Món chính',
+      restaurantId: restaurant.id,
+      restaurantName: restaurant.name,
+      isAvailable: availableStatus,
+      status: availableStatus ? 'available' : 'out_of_stock'
+    };
+
+    restaurant.menu.push(newDish);
+    saveDb();
+
+    res.status(201).json({
+      success: true,
+      message: `Đã thêm món "${newDish.name}" vào thực đơn thành công!`,
+      data: newDish
+    });
+  } catch (error) {
+    console.error('Lỗi thêm món ăn:', error);
+    res.status(500).json({ success: false, message: 'Lỗi hệ thống khi thêm món ăn vào thực đơn.' });
+  }
+});
+
+// 6.3 Sửa thông tin món ăn (Admin only)
+// PUT /api/restaurants/:id/menu/:dishId
+router.put('/:id/menu/:dishId', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const dishId = parseInt(req.params.dishId, 10);
+    const db = getDb();
+    const restaurant = db.restaurants.find(r => r.id === id);
+
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy quán ăn.' });
+    }
+
+    if (!Array.isArray(restaurant.menu)) {
+      return res.status(404).json({ success: false, message: 'Thực đơn của quán đang trống.' });
+    }
+
+    const dishIndex = restaurant.menu.findIndex(m => m.id === dishId);
+    if (dishIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy món ăn trong thực đơn.' });
+    }
+
+    const existingDish = restaurant.menu[dishIndex];
+    const { name, price, priceNum, description, image, category, isAvailable, status } = req.body;
+
+    if (name) existingDish.name = name.trim();
+    if (priceNum !== undefined) {
+      existingDish.priceNum = Number(priceNum);
+      existingDish.price = Number(priceNum).toLocaleString('vi-VN') + 'đ';
+    } else if (price) {
+      existingDish.price = String(price).trim();
+      existingDish.priceNum = parsePrice(price) || existingDish.priceNum;
+    }
+    if (description !== undefined) existingDish.description = String(description).trim();
+    if (image !== undefined) existingDish.image = String(image).trim();
+    if (category !== undefined) existingDish.category = String(category).trim();
+
+    if (isAvailable !== undefined) {
+      existingDish.isAvailable = Boolean(isAvailable);
+      existingDish.status = existingDish.isAvailable ? 'available' : 'out_of_stock';
+    } else if (status !== undefined) {
+      existingDish.status = status;
+      existingDish.isAvailable = status !== 'out_of_stock';
+    }
+
+    saveDb();
+
+    res.json({
+      success: true,
+      message: `Đã cập nhật món "${existingDish.name}" thành công!`,
+      data: existingDish
+    });
+  } catch (error) {
+    console.error('Lỗi sửa món ăn:', error);
+    res.status(500).json({ success: false, message: 'Lỗi hệ thống khi cập nhật món ăn.' });
+  }
+});
+
+// 6.4 Chuyển đổi trạng thái còn hàng / hết hàng (Admin only)
+// PATCH /api/restaurants/:id/menu/:dishId/status
+router.patch('/:id/menu/:dishId/status', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const dishId = parseInt(req.params.dishId, 10);
+    const db = getDb();
+    const restaurant = db.restaurants.find(r => r.id === id);
+
+    if (!restaurant || !Array.isArray(restaurant.menu)) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy quán ăn.' });
+    }
+
+    const dish = restaurant.menu.find(m => m.id === dishId);
+    if (!dish) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy món ăn.' });
+    }
+
+    const { isAvailable } = req.body;
+    dish.isAvailable = isAvailable !== undefined ? Boolean(isAvailable) : !dish.isAvailable;
+    dish.status = dish.isAvailable ? 'available' : 'out_of_stock';
+
+    saveDb();
+
+    res.json({
+      success: true,
+      message: `Đã chuyển trạng thái món "${dish.name}" sang: ${dish.isAvailable ? 'Còn hàng' : 'Hết hàng'}`,
+      data: dish
+    });
+  } catch (error) {
+    console.error('Lỗi đổi trạng thái món ăn:', error);
+    res.status(500).json({ success: false, message: 'Lỗi khi cập nhật trạng thái món ăn.' });
+  }
+});
+
+// 6.5 Xóa món ăn khỏi thực đơn (Admin only)
+// DELETE /api/restaurants/:id/menu/:dishId
+router.delete('/:id/menu/:dishId', authenticateToken, requireAdmin, (req, res) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    const dishId = parseInt(req.params.dishId, 10);
+    const db = getDb();
+    const restaurant = db.restaurants.find(r => r.id === id);
+
+    if (!restaurant || !Array.isArray(restaurant.menu)) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy quán ăn.' });
+    }
+
+    const dishIndex = restaurant.menu.findIndex(m => m.id === dishId);
+    if (dishIndex === -1) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy món ăn để xóa.' });
+    }
+
+    const removedDish = restaurant.menu.splice(dishIndex, 1)[0];
+    saveDb();
+
+    res.json({
+      success: true,
+      message: `Đã xóa món "${removedDish.name}" khỏi thực đơn thành công!`
+    });
+  } catch (error) {
+    console.error('Lỗi xóa món ăn:', error);
+    res.status(500).json({ success: false, message: 'Lỗi hệ thống khi xóa món ăn.' });
+  }
+});
+
 export default router;
 

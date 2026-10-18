@@ -568,6 +568,19 @@
       "status": "approved",
       "date": "2026-10-09",
       "createdAt": "2026-10-09T06:20:57.435Z"
+    },
+    {
+      "id": 11,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "món ngon",
+      "images": [],
+      "status": "pending",
+      "date": "2026-10-25",
+      "createdAt": "2026-10-25T00:46:18.217Z"
     }
   ],
   "favorites": [
@@ -590,12 +603,6 @@
       "createdAt": "2026-10-05T05:39:17.918Z"
     },
     {
-      "id": 9,
-      "userId": 1,
-      "restaurantId": 3,
-      "createdAt": "2026-10-05T05:55:44.905Z"
-    },
-    {
       "id": 10,
       "userId": 2,
       "restaurantId": 1,
@@ -610,5 +617,25 @@
     "address": "Hà Nội & TP. Hồ Chí Minh",
     "description": "FoodHub là nền tảng tìm kiếm, khám phá và chia sẻ trải nghiệm ăn uống chân thực nhất.",
     "logoUrl": "/favicon.svg"
-  }
+  },
+  "orders": [],
+  "carts": [
+    {
+      "userId": 2,
+      "restaurantId": 2,
+      "restaurantName": "Bún Chả Hương Liên (Bún Chả Obama)",
+      "restaurantAddress": "24 Lê Văn Hưu, Phường Phan Chu Trinh, Hai Bà Trưng, Hà Nội",
+      "items": [
+        {
+          "name": "Bún chả đặc biệt",
+          "price": "60.000đ",
+          "priceNum": 60000,
+          "image": "",
+          "quantity": 1,
+          "note": ""
+        }
+      ],
+      "updatedAt": "2026-10-25T00:47:46.765Z"
+    }
+  ]
 }
