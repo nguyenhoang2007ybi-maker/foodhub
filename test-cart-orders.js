@@ -15,6 +15,23 @@ async function request(path, options = {}) {
   return { status: res.status, data };
 }
 
+// Helper xác thực email OTP
+async function getEmailVerificationToken(email) {
+  const otpRes = await request('/email/send-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email })
+  });
+  assert.strictEqual(otpRes.status, 200, 'Gửi mã OTP thành công');
+  const devCode = otpRes.data.devCode;
+
+  const verifyRes = await request('/email/verify-otp', {
+    method: 'POST',
+    body: JSON.stringify({ email, otp: devCode })
+  });
+  assert.strictEqual(verifyRes.status, 200, 'Xác thực OTP thành công');
+  return verifyRes.data.verificationToken;
+}
+
 async function runTests() {
   console.log('--- BẮT ĐẦU KIỂM THỬ HỆ THỐNG GIỎ HÀNG & ĐẶT HÀNG FOODHUB ---');
 
@@ -59,18 +76,18 @@ async function runTests() {
   assert.deepStrictEqual(getCart.data.data.items, []);
   console.log('✓ Giỏ hàng rỗng chính xác:', getCart.data.data);
 
-  // 5. Cập nhật món vào giỏ hàng
-  console.log('\n[5] Cập nhật giỏ hàng với món quán 1 (Phở Bát Đàn)...');
+  // 5. Cập nhật món vào giỏ hàng (Quán 1: Phở Thìn Lò Đúc)
+  console.log('\n[5] Cập nhật giỏ hàng với món quán 1 (Phở Thìn Lò Đúc)...');
   const saveCart = await request('/cart', {
     method: 'POST',
     headers: userHeaders,
     body: JSON.stringify({
       restaurantId: 1,
-      restaurantName: 'Phở Gia Truyền Bát Đàn',
-      restaurantAddress: '49 Bát Đàn, Hoàn Kiếm, Hà Nội',
+      restaurantName: 'Phở Thìn Lò Đúc',
+      restaurantAddress: '13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội',
       items: [
-        { dishId: 101, name: 'Phở Tái Nạm Gầu', quantity: 2, priceNum: 65000, note: 'Ít hành' },
-        { dishId: 104, name: 'Quẩy Giòn', quantity: 1, priceNum: 10000, note: '' }
+        { dishId: 1, name: 'Phở tái nạm', quantity: 2, priceNum: 65000, note: 'Ít hành' },
+        { dishId: 2, name: 'Quẩy giòn giòn (cặp)', quantity: 3, priceNum: 10000, note: '' }
       ]
     })
   });
@@ -78,22 +95,26 @@ async function runTests() {
   assert.strictEqual(saveCart.data.data.items.length, 2);
   console.log('✓ Lưu giỏ hàng thành công:', saveCart.data.data.items.length, 'món');
 
-  // 6. Tạo đơn hàng với mã giảm giá FOODHUB10
-  console.log('\n[6] Đặt hàng (POST /api/orders) với coupon FOODHUB10...');
+  // 6. Tạo đơn hàng với mã giảm giá FOODHUB10 sau khi xác nhận email OTP
+  console.log('\n[6] Xác nhận OTP email và đặt hàng (POST /api/orders) với coupon FOODHUB10...');
+  const verificationToken1 = await getEmailVerificationToken('khachhang@foodhub.vn');
+
   const createOrder = await request('/orders', {
     method: 'POST',
     headers: userHeaders,
     body: JSON.stringify({
       restaurantId: 1,
-      recipientName: 'Nguyễn Văn Test',
-      recipientPhone: '0987654321',
+      recipientName: 'Nguyễn Văn A',
+      recipientPhone: '0912345678',
+      contactEmail: 'khachhang@foodhub.vn',
+      emailVerificationToken: verificationToken1,
       deliveryAddress: 'Số 12 phố Tràng Thi, Hoàn Kiếm, Hà Nội',
       note: 'Giao giờ hành chính',
       couponCode: 'FOODHUB10',
       paymentMethod: 'COD',
       items: [
-        { dishId: 101, quantity: 2, note: 'Ít hành' },
-        { dishId: 104, quantity: 1, note: '' }
+        { dishId: 1, name: 'Phở tái nạm', quantity: 2, note: 'Ít hành' },
+        { dishId: 2, name: 'Quẩy giòn giòn (cặp)', quantity: 3, note: '' }
       ]
     })
   });
@@ -101,10 +122,10 @@ async function runTests() {
   assert.strictEqual(createOrder.status, 201, 'Tạo đơn hàng thành công');
   const order = createOrder.data.data;
   console.log('✓ Đơn hàng tạo thành công! Mã đơn:', order.code);
-  console.log('  - Tạm tính:', order.subtotal, 'đ (Mong đợi: 65k*2 + 10k = 140k)');
+  console.log('  - Tạm tính:', order.subtotal, 'đ (Mong đợi: 65k*2 + 10k*3 = 160k)');
   console.log('  - Phí ship:', order.shippingFee, 'đ (Dưới 200k là 15k)');
-  console.log('  - Giảm giá:', order.discount, 'đ (10% của 140k = 14k)');
-  console.log('  - Tổng tiền:', order.total, 'đ (140k + 15k - 14k = 141k)');
+  console.log('  - Giảm giá:', order.discount, 'đ (10% của 160k = 16k)');
+  console.log('  - Tổng tiền:', order.total, 'đ (160k + 15k - 16k = 159k)');
   assert.strictEqual(order.subtotal, 160000);
   assert.strictEqual(order.shippingFee, 15000);
   assert.strictEqual(order.discount, 16000);
@@ -154,19 +175,23 @@ async function runTests() {
 
   // 11. Tạo thêm đơn thứ hai để test quy trình Admin duyệt
   console.log('\n[11] Tạo đơn hàng thứ 2 để kiểm thử quyền Admin...');
+  const verificationToken2 = await getEmailVerificationToken('khachhang@foodhub.vn');
+
   const createOrder2 = await request('/orders', {
     method: 'POST',
     headers: userHeaders,
     body: JSON.stringify({
       restaurantId: 2, // Bún Chả Hương Liên
-      recipientName: 'Trần Thị B',
-      recipientPhone: '0912345678',
+      recipientName: 'Trần Thị Thu Thảo',
+      recipientPhone: '0977665544',
+      contactEmail: 'khachhang@foodhub.vn',
+      emailVerificationToken: verificationToken2,
       deliveryAddress: '24 Lê Văn Hưu, Hai Bà Trưng, Hà Nội',
       note: 'Mang thêm ớt tỏi',
       paymentMethod: 'COD',
       items: [
-        { dishId: 105, quantity: 2 }, // Bún chả đặc biệt (60k * 2 = 120k)
-        { dishId: 106, quantity: 1 }  // Combo Obama (105k * 1 = 105k) -> Subtotal = 225k -> Freeship!
+        { dishId: 0, name: 'Bún chả đặc biệt', quantity: 2 }, // 60k * 2 = 120k
+        { dishId: 1, name: 'Combo Obama', quantity: 1 }      // 105k * 1 = 105k -> Subtotal = 225k -> Freeship!
       ]
     })
   });

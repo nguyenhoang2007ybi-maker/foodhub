@@ -579,6 +579,45 @@
       "status": "approved",
       "date": "2026-10-09",
       "createdAt": "2026-10-09T06:20:57.435Z"
+    },
+    {
+      "id": 11,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Món ăn tại đây cực kỳ xuất sắc, phục vụ chu đáo tận tình!",
+      "images": [],
+      "status": "pending",
+      "date": "2026-10-21",
+      "createdAt": "2026-10-21T06:09:57.236Z"
+    },
+    {
+      "id": 12,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Món ăn tại đây cực kỳ xuất sắc, phục vụ chu đáo tận tình!",
+      "images": [],
+      "status": "pending",
+      "date": "2026-10-21",
+      "createdAt": "2026-10-21T06:23:55.783Z"
+    },
+    {
+      "id": 13,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Món ăn tại đây cực kỳ xuất sắc, phục vụ chu đáo tận tình!",
+      "images": [],
+      "status": "pending",
+      "date": "2026-10-21",
+      "createdAt": "2026-10-21T06:25:56.227Z"
     }
   ],
   "favorites": [
@@ -607,12 +646,6 @@
       "createdAt": "2026-10-05T05:55:44.905Z"
     },
     {
-      "id": 10,
-      "userId": 2,
-      "restaurantId": 1,
-      "createdAt": "2026-10-09T06:20:57.442Z"
-    },
-    {
       "id": 11,
       "userId": 7,
       "restaurantId": 2,
@@ -628,32 +661,300 @@
     "description": "FoodHub là nền tảng tìm kiếm, khám phá và chia sẻ trải nghiệm ăn uống chân thực nhất.",
     "logoUrl": "/favicon.svg"
   },
-  "orders": [],
-  "carts": [
+  "orders": [
     {
-      "userId": 7,
+      "id": "FH261021-2HOG",
+      "code": "FH261021-2HOG",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 2,
+      "restaurantName": "Bún Chả Hương Liên (Bún Chả Obama)",
+      "restaurantAddress": "24 Lê Văn Hưu, Phường Phan Chu Trinh, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1594998893017-36147cbcae05?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Trần Thị Thu Thảo",
+      "recipientPhone": "0977665544",
+      "contactEmail": "khachhang@foodhub.vn",
+      "emailVerified": true,
+      "emailVerifiedAt": "2026-10-21T06:25:56.848Z",
+      "deliveryAddress": "24 Lê Văn Hưu, Hai Bà Trưng, Hà Nội",
+      "note": "Mang thêm ớt tỏi",
+      "items": [
+        {
+          "dishId": 0,
+          "name": "Bún chả đặc biệt",
+          "price": "60.000đ",
+          "priceNum": 60000,
+          "image": "",
+          "quantity": 2,
+          "total": 120000
+        },
+        {
+          "dishId": 1,
+          "name": "Combo Obama",
+          "price": "105.000đ",
+          "priceNum": 105000,
+          "image": "",
+          "quantity": 1,
+          "total": 105000
+        }
+      ],
+      "totalItems": 3,
+      "subtotal": 225000,
+      "shippingFee": 0,
+      "discount": 0,
+      "couponCode": "",
+      "total": 225000,
+      "paymentMethod": "COD",
+      "paymentStatus": "paid",
+      "status": "completed",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-21T06:25:56.848Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        },
+        {
+          "status": "confirmed",
+          "time": "2026-10-21T06:25:56.863Z",
+          "message": "Trạng thái: Quán ăn đã xác nhận đơn hàng (Admin test confirmed)"
+        },
+        {
+          "status": "preparing",
+          "time": "2026-10-21T06:25:56.870Z",
+          "message": "Trạng thái: Quán ăn đang chuẩn bị món (Admin test preparing)"
+        },
+        {
+          "status": "shipping",
+          "time": "2026-10-21T06:25:56.875Z",
+          "message": "Trạng thái: Tài xế đang giao hàng (Admin test shipping)"
+        },
+        {
+          "status": "completed",
+          "time": "2026-10-21T06:25:56.881Z",
+          "message": "Trạng thái: Giao hàng thành công (Hoàn tất) (Admin test completed)"
+        }
+      ],
+      "createdAt": "2026-10-21T06:25:56.848Z",
+      "updatedAt": "2026-10-21T06:25:56.881Z"
+    },
+    {
+      "id": "FH261021-6YB7",
+      "code": "FH261021-6YB7",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
       "restaurantId": 1,
       "restaurantName": "Phở Thìn Lò Đúc",
       "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Nguyễn Văn A",
+      "recipientPhone": "0912345678",
+      "contactEmail": "khachhang@foodhub.vn",
+      "emailVerified": true,
+      "emailVerifiedAt": "2026-10-21T06:25:56.802Z",
+      "deliveryAddress": "Số 12 phố Tràng Thi, Hoàn Kiếm, Hà Nội",
+      "note": "Giao giờ hành chính",
       "items": [
         {
-          "name": "Phở tái lăn đặc biệt",
-          "price": "75.000đ",
-          "priceNum": 75000,
-          "image": "",
-          "quantity": 1,
-          "note": ""
-        },
-        {
+          "dishId": 1,
           "name": "Phở tái nạm",
           "price": "65.000đ",
           "priceNum": 65000,
           "image": "",
-          "quantity": 1,
-          "note": ""
+          "quantity": 2,
+          "total": 130000
+        },
+        {
+          "dishId": 2,
+          "name": "Quẩy giòn giòn (cặp)",
+          "price": "10.000đ",
+          "priceNum": 10000,
+          "image": "",
+          "quantity": 3,
+          "total": 30000
         }
       ],
-      "updatedAt": "2026-10-14T06:26:46.133Z"
+      "totalItems": 5,
+      "subtotal": 160000,
+      "shippingFee": 15000,
+      "discount": 16000,
+      "couponCode": "FOODHUB10",
+      "total": 159000,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "cancelled",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-21T06:25:56.802Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        },
+        {
+          "status": "cancelled",
+          "time": "2026-10-21T06:25:56.823Z",
+          "message": "Đơn hàng đã bị hủy. Lý do: Đổi địa chỉ giao hàng"
+        }
+      ],
+      "createdAt": "2026-10-21T06:25:56.802Z",
+      "updatedAt": "2026-10-21T06:25:56.823Z",
+      "cancelReason": "Đổi địa chỉ giao hàng"
+    },
+    {
+      "id": "FH261021-ZJL8",
+      "code": "FH261021-ZJL8",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 2,
+      "restaurantName": "Bún Chả Hương Liên (Bún Chả Obama)",
+      "restaurantAddress": "24 Lê Văn Hưu, Phường Phan Chu Trinh, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1594998893017-36147cbcae05?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Trần Thị Thu Thảo",
+      "recipientPhone": "0977665544",
+      "contactEmail": "khachhang@foodhub.vn",
+      "emailVerified": true,
+      "emailVerifiedAt": "2026-10-21T06:23:39.328Z",
+      "deliveryAddress": "24 Lê Văn Hưu, Hai Bà Trưng, Hà Nội",
+      "note": "Mang thêm ớt tỏi",
+      "items": [
+        {
+          "dishId": 0,
+          "name": "Bún chả đặc biệt",
+          "price": "60.000đ",
+          "priceNum": 60000,
+          "image": "",
+          "quantity": 2,
+          "total": 120000
+        },
+        {
+          "dishId": 1,
+          "name": "Combo Obama",
+          "price": "105.000đ",
+          "priceNum": 105000,
+          "image": "",
+          "quantity": 1,
+          "total": 105000
+        }
+      ],
+      "totalItems": 3,
+      "subtotal": 225000,
+      "shippingFee": 0,
+      "discount": 0,
+      "couponCode": "",
+      "total": 225000,
+      "paymentMethod": "COD",
+      "paymentStatus": "paid",
+      "status": "completed",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-21T06:23:39.328Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        },
+        {
+          "status": "confirmed",
+          "time": "2026-10-21T06:23:39.341Z",
+          "message": "Trạng thái: Quán ăn đã xác nhận đơn hàng (Admin test confirmed)"
+        },
+        {
+          "status": "preparing",
+          "time": "2026-10-21T06:23:39.346Z",
+          "message": "Trạng thái: Quán ăn đang chuẩn bị món (Admin test preparing)"
+        },
+        {
+          "status": "shipping",
+          "time": "2026-10-21T06:23:39.351Z",
+          "message": "Trạng thái: Tài xế đang giao hàng (Admin test shipping)"
+        },
+        {
+          "status": "completed",
+          "time": "2026-10-21T06:23:39.356Z",
+          "message": "Trạng thái: Giao hàng thành công (Hoàn tất) (Admin test completed)"
+        }
+      ],
+      "createdAt": "2026-10-21T06:23:39.328Z",
+      "updatedAt": "2026-10-21T06:23:39.356Z"
+    },
+    {
+      "id": "FH261021-P0J3",
+      "code": "FH261021-P0J3",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Nguyễn Văn A",
+      "recipientPhone": "0912345678",
+      "contactEmail": "khachhang@foodhub.vn",
+      "emailVerified": true,
+      "emailVerifiedAt": "2026-10-21T06:23:39.292Z",
+      "deliveryAddress": "Số 12 phố Tràng Thi, Hoàn Kiếm, Hà Nội",
+      "note": "Giao giờ hành chính",
+      "items": [
+        {
+          "dishId": 1,
+          "name": "Phở tái nạm",
+          "price": "65.000đ",
+          "priceNum": 65000,
+          "image": "",
+          "quantity": 2,
+          "total": 130000
+        },
+        {
+          "dishId": 2,
+          "name": "Quẩy giòn giòn (cặp)",
+          "price": "10.000đ",
+          "priceNum": 10000,
+          "image": "",
+          "quantity": 3,
+          "total": 30000
+        }
+      ],
+      "totalItems": 5,
+      "subtotal": 160000,
+      "shippingFee": 15000,
+      "discount": 16000,
+      "couponCode": "FOODHUB10",
+      "total": 159000,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "cancelled",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-21T06:23:39.292Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        },
+        {
+          "status": "cancelled",
+          "time": "2026-10-21T06:23:39.309Z",
+          "message": "Đơn hàng đã bị hủy. Lý do: Đổi địa chỉ giao hàng"
+        }
+      ],
+      "createdAt": "2026-10-21T06:23:39.292Z",
+      "updatedAt": "2026-10-21T06:23:39.309Z",
+      "cancelReason": "Đổi địa chỉ giao hàng"
+    }
+  ],
+  "carts": [
+    {
+      "userId": 7,
+      "restaurantId": null,
+      "restaurantName": "",
+      "restaurantAddress": "",
+      "items": [],
+      "updatedAt": "2026-10-21T06:28:54.726Z"
+    },
+    {
+      "userId": 2,
+      "restaurantId": null,
+      "restaurantName": "",
+      "restaurantAddress": "",
+      "items": [],
+      "updatedAt": "2026-10-21T06:25:56.854Z"
     }
   ],
   "emailVerifications": {

@@ -59,7 +59,45 @@ export function clearAppliedCoupon() {
 export function getCart() {
   try {
     const key = getCartKey();
-    const raw = localStorage.getItem(key);
+    let raw = localStorage.getItem(key);
+
+    // Nếu người dùng đã đăng nhập nhưng giỏ cá nhân rỗng, kiểm tra xem có giỏ hàng guest trước đó để chuyển giao (migrate) sang không
+    const user = getUser();
+    if (user) {
+      let isUserCartEmpty = true;
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed?.items) && parsed.items.length > 0) {
+            isUserCartEmpty = false;
+          }
+        } catch (e) {
+          isUserCartEmpty = true;
+        }
+      }
+
+      if (isUserCartEmpty) {
+        const guestRaw = localStorage.getItem('foodhub_cart_guest');
+        if (guestRaw) {
+          try {
+            const guestCart = JSON.parse(guestRaw);
+            if (Array.isArray(guestCart.items) && guestCart.items.length > 0) {
+              localStorage.setItem(key, guestRaw);
+              localStorage.removeItem('foodhub_cart_guest');
+              const guestCoupon = localStorage.getItem('foodhub_cart_guest_coupon');
+              if (guestCoupon) {
+                localStorage.setItem(`${key}_coupon`, guestCoupon);
+                localStorage.removeItem('foodhub_cart_guest_coupon');
+              }
+              raw = guestRaw;
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
+    }
+
     if (!raw) {
       return {
         restaurantId: null,
@@ -137,21 +175,26 @@ export function addToCart(dish, restaurant, quantity = 1, note = '') {
   cart.restaurantAddress = restaurant.address || '';
 
   const rawId = dish.id !== undefined && dish.id !== null ? dish.id : (dish.dishId !== undefined ? dish.dishId : dish.name);
-  const existingItem = cart.items.find(item => String(item.dishId) === String(rawId));
+  const existingItem = cart.items.find(item =>
+    String(item.dishId) === String(rawId) || (item.name && dish.name && item.name === dish.name)
+  );
 
   const priceNum = dish.priceNum || (parseInt(String(dish.price || '').replace(/[^\d]/g, ''), 10) || 0);
+  const fallbackImage = dish.image || (restaurant && restaurant.image) || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80';
+  const addQty = Math.max(1, parseInt(quantity, 10) || 1);
 
   if (existingItem) {
-    existingItem.quantity += Math.max(1, quantity);
+    existingItem.quantity += addQty;
     if (note) existingItem.note = note;
+    if (!existingItem.image && fallbackImage) existingItem.image = fallbackImage;
   } else {
     cart.items.push({
       dishId: rawId,
       name: dish.name,
-      price: dish.price,
+      price: dish.price || (priceNum ? `${priceNum.toLocaleString('vi-VN')}đ` : '0đ'),
       priceNum: priceNum,
-      image: dish.image || '',
-      quantity: Math.max(1, quantity),
+      image: fallbackImage,
+      quantity: addQty,
       note: note || ''
     });
   }
@@ -169,6 +212,8 @@ export function addToCart(dish, restaurant, quantity = 1, note = '') {
 export function replaceCartWithDish(dish, restaurant, quantity = 1, note = '') {
   const restId = Number(restaurant.id);
   const priceNum = dish.priceNum || (parseInt(String(dish.price || '').replace(/[^\d]/g, ''), 10) || 0);
+  const fallbackImage = dish.image || (restaurant && restaurant.image) || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80';
+  const addQty = Math.max(1, parseInt(quantity, 10) || 1);
 
   const newCart = {
     restaurantId: restId,
@@ -176,12 +221,12 @@ export function replaceCartWithDish(dish, restaurant, quantity = 1, note = '') {
     restaurantAddress: restaurant.address || '',
     items: [
       {
-        dishId: dish.id,
+        dishId: dish.id !== undefined && dish.id !== null ? dish.id : dish.name,
         name: dish.name,
-        price: dish.price,
+        price: dish.price || (priceNum ? `${priceNum.toLocaleString('vi-VN')}đ` : '0đ'),
         priceNum: priceNum,
-        image: dish.image || '',
-        quantity: Math.max(1, quantity),
+        image: fallbackImage,
+        quantity: addQty,
         note: note || ''
       }
     ]
@@ -194,8 +239,7 @@ export function replaceCartWithDish(dish, restaurant, quantity = 1, note = '') {
 // Cập nhật số lượng món
 export function updateQuantity(dishId, delta) {
   const cart = getCart();
-  const idNum = Number(dishId);
-  const itemIndex = cart.items.findIndex(i => Number(i.dishId) === idNum);
+  const itemIndex = cart.items.findIndex(i => String(i.dishId) === String(dishId));
 
   if (itemIndex === -1) return cart;
 
@@ -218,8 +262,7 @@ export function updateQuantity(dishId, delta) {
 // Xóa 1 món khỏi giỏ
 export function removeItem(dishId) {
   const cart = getCart();
-  const idNum = Number(dishId);
-  cart.items = cart.items.filter(i => Number(i.dishId) !== idNum);
+  cart.items = cart.items.filter(i => String(i.dishId) !== String(dishId));
 
   if (cart.items.length === 0) {
     cart.restaurantId = null;
@@ -308,7 +351,7 @@ export function formatVND(amount) {
 // Cập nhật số lượng trên các badge giỏ hàng
 export function updateCartBadge() {
   const count = getCartCount();
-  const badges = document.querySelectorAll('.header-cart-badge, #header-cart-count, #mobile-cart-count');
+  const badges = document.querySelectorAll('.header-cart-badge, #header-cart-count, #mobile-cart-count, #tab-cart-badge');
   badges.forEach(badge => {
     badge.textContent = count;
     if (count > 0) {

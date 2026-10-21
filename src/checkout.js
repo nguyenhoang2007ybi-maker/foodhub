@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
       icon: 'shopping_cart',
       title: 'Giỏ hàng của bạn đang trống',
       desc: 'Hãy thêm món ăn vào giỏ trước khi tiến hành thanh toán.',
-      actionText: 'Khám phá món ngon ngay',
+      actionText: 'Tiếp tục mua sắm',
       actionHref: '/explore.html'
     });
     return;
@@ -100,19 +100,24 @@ function renderOrderSummary() {
       const priceUnit = item.priceNum || (parseInt(String(item.price || '').replace(/[^\d]/g, ''), 10) || 0);
       const lineTotal = priceUnit * Number(item.quantity || 0);
 
+      const fallbackImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80';
       const row = document.createElement('div');
       row.className = 'py-3 flex items-center gap-3';
-      row.innerHTML = `
-        <div class="w-12 h-12 rounded-xl overflow-hidden bg-surface-container-high flex-shrink-0">
-          <img src="${item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80'}" alt="${item.name}" class="w-full h-full object-cover" />
-        </div>
-        <div class="min-w-0 flex-1">
-          <p class="text-xs font-bold text-on-surface truncate">${item.name}</p>
-          ${item.note ? `<p class="text-[10px] text-secondary truncate">Ghi chú: ${item.note}</p>` : ''}
-          <p class="text-[11px] text-secondary">${formatVND(priceUnit)} × ${item.quantity}</p>
-        </div>
-        <span class="text-xs font-bold text-on-surface whitespace-nowrap">${formatVND(lineTotal)}</span>
-      `;
+      row.innerHTML = [
+        '<div class="w-14 h-14 rounded-2xl overflow-hidden bg-surface-container-high flex-shrink-0 shadow-sm border border-surface-container-high">',
+        '  <img src="' + (item.image || fallbackImg) + '" alt="' + item.name + '" class="w-full h-full object-cover" onerror="this.src=\'' + fallbackImg + '\'" />',
+        '</div>',
+        '<div class="min-w-0 flex-1">',
+        '  <p class="text-xs font-bold text-on-surface truncate">' + item.name + '</p>',
+        (item.note ? '  <p class="text-[10px] text-secondary truncate">Ghi chú: ' + item.note + '</p>' : ''),
+        '  <p class="text-[11px] text-secondary mt-0.5">',
+        '    Đơn giá: <span class="font-semibold text-primary">' + formatVND(priceUnit) + '</span> × ' + item.quantity,
+        '  </p>',
+        '</div>',
+        '<div class="text-right">',
+        '  <span class="text-xs font-bold text-on-surface whitespace-nowrap">' + formatVND(lineTotal) + '</span>',
+        '</div>'
+      ].filter(Boolean).join('');
       listEl.appendChild(row);
     });
   }

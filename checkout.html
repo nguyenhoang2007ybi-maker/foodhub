@@ -92,7 +92,7 @@
       </p>
       <a href="/explore.html" id="blocked-action" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-md hover:bg-primary-container transition-all">
         <span class="material-symbols-outlined text-[18px]">restaurant_menu</span>
-        <span>Khám phá món ngon ngay</span>
+        <span>Tiếp tục mua sắm</span>
       </a>
     </div>
 
@@ -318,8 +318,19 @@
           <button id="place-order-btn" type="button"
             class="w-full h-12 rounded-2xl bg-primary hover:bg-primary-container text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed">
             <span class="material-symbols-outlined text-[20px]">check_circle</span>
-            <span>Đặt hàng</span>
+            <span>Tiến hành đặt hàng</span>
           </button>
+
+          <div class="flex items-center justify-between pt-1 text-xs">
+            <a href="/cart.html" class="inline-flex items-center gap-1 font-semibold text-secondary hover:text-primary transition-colors">
+              <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+              <span>Quay lại giỏ hàng</span>
+            </a>
+            <a href="/explore.html" class="inline-flex items-center gap-1 font-semibold text-secondary hover:text-primary transition-colors">
+              <span class="material-symbols-outlined text-[16px]">storefront</span>
+              <span>Tiếp tục mua sắm</span>
+            </a>
+          </div>
 
           <p class="text-[11px] text-secondary text-center leading-relaxed">
             Bằng việc đặt hàng, bạn đồng ý với điều khoản sử dụng của FoodHub. Email phải được xác nhận trước khi đơn được tạo.
@@ -341,10 +352,16 @@
       <p class="text-xs text-secondary leading-relaxed mb-2">Mã đơn hàng của bạn là:</p>
       <p id="success-order-code" class="text-xl font-black text-primary mb-4">FH-XXXX</p>
       <p class="text-xs text-secondary leading-relaxed mb-6">Xác nhận đơn hàng đã được gửi tới email của bạn. Bạn có thể theo dõi tiến trình trong mục “Đơn hàng đã đặt”.</p>
-      <a href="/cart.html#orders" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-md hover:bg-primary-container transition-all">
-        <span class="material-symbols-outlined text-[18px]">receipt_long</span>
-        <span>Xem đơn hàng của tôi</span>
-      </a>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="/cart.html#orders" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-md hover:bg-primary-container transition-all">
+          <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+          <span>Xem đơn hàng của tôi</span>
+        </a>
+        <a href="/explore.html" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-surface-container-high hover:bg-surface-container text-on-surface font-bold text-sm transition-all">
+          <span class="material-symbols-outlined text-[18px]">storefront</span>
+          <span>Tiếp tục mua sắm</span>
+        </a>
+      </div>
     </div>
   </div>
 

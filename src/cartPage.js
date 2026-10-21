@@ -23,6 +23,7 @@ import {
 
 let appliedCoupon = getAppliedCoupon();
 let pendingCancelOrderId = null;
+let pendingDeleteItem = null;
 
 const STATUS_MAP = {
   pending: { label: 'Chờ xác nhận', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: 'schedule' },
@@ -39,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupTabs();
   setupCartView();
+  setupItemDeleteModal();
   setupModals();
 
   // Nếu người dùng đã áp dụng ưu đãi trước đó (ví dụ quay lại từ trang thanh toán)
@@ -170,6 +172,53 @@ function setupCartView() {
   });
 }
 
+// Thiết lập Modal xác nhận xóa 1 món
+function setupItemDeleteModal() {
+  const modal = document.getElementById('delete-item-modal');
+  const cancelBtn = document.getElementById('cancel-delete-item-btn');
+  const confirmBtn = document.getElementById('confirm-delete-item-btn');
+
+  cancelBtn?.addEventListener('click', () => {
+    modal?.classList.add('hidden');
+    pendingDeleteItem = null;
+  });
+
+  confirmBtn?.addEventListener('click', () => {
+    if (pendingDeleteItem) {
+      removeItem(pendingDeleteItem.dishId);
+      toast.info(`Đã xóa "${pendingDeleteItem.name}" khỏi giỏ hàng.`);
+      pendingDeleteItem = null;
+      renderCart();
+    }
+    modal?.classList.add('hidden');
+  });
+
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      pendingDeleteItem = null;
+    }
+  });
+}
+
+function confirmDeleteItem(item) {
+  pendingDeleteItem = item;
+  const modal = document.getElementById('delete-item-modal');
+  const nameEl = document.getElementById('delete-item-name');
+  if (nameEl) nameEl.textContent = `"${item.name}"`;
+
+  if (modal) {
+    modal.classList.remove('hidden');
+  } else {
+    // Fallback phòng khi modal HTML chưa sẵn sàng
+    if (window.confirm(`Bạn có chắc chắn muốn xóa món "${item.name}" khỏi giỏ hàng không?`)) {
+      removeItem(item.dishId);
+      toast.info(`Đã xóa "${item.name}" khỏi giỏ hàng.`);
+      renderCart();
+    }
+  }
+}
+
 function applyCouponCode(code) {
   if (!code) {
     toast.warning('Vui lòng nhập mã ưu đãi.');
@@ -211,7 +260,10 @@ function renderCart() {
   if (tabBadge) tabBadge.textContent = count;
   updateCartBadge();
 
-  if (cart.items.length === 0) {
+  // Kiểm tra nếu giỏ hàng trống: hiển thị thông báo giỏ hàng trống và nút Tiếp tục mua sắm
+  if (!cart.items || cart.items.length === 0) {
+    appliedCoupon = null;
+    clearAppliedCoupon();
     emptyState?.classList.remove('hidden');
     contentState?.classList.add('hidden');
     return;
@@ -253,70 +305,101 @@ function renderCart() {
       
       const priceUnit = item.priceNum || (parseInt(String(item.price || '').replace(/[^\d]/g, ''), 10) || 0);
       const itemTotal = priceUnit * item.quantity;
+      const fallbackImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80';
 
       itemEl.innerHTML = `
-        <div class="flex items-center gap-3 min-w-0">
-          <div class="w-14 h-14 rounded-2xl overflow-hidden bg-surface-container-high flex-shrink-0">
-            <img src="${item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80'}" alt="${item.name}" class="w-full h-full object-cover" />
+        <div class="flex items-center gap-3.5 min-w-0 flex-1">
+          <div class="w-16 h-16 rounded-2xl overflow-hidden bg-surface-container-high flex-shrink-0 shadow-sm border border-surface-container-high">
+            <img
+              src="${item.image || fallbackImg}"
+              alt="${item.name}"
+              class="w-full h-full object-cover"
+              onerror="this.src='${fallbackImg}'"
+            />
           </div>
-          <div class="min-w-0">
+          <div class="min-w-0 flex-1">
             <h4 class="text-sm font-bold text-on-surface truncate">${item.name}</h4>
-            <p class="text-xs font-semibold text-primary mt-0.5">${formatVND(priceUnit)} / suất</p>
+            <p class="text-xs font-medium text-secondary mt-0.5">
+              Đơn giá: <span class="font-bold text-primary">${formatVND(priceUnit)}</span>
+            </p>
             <input
               type="text"
-              placeholder="Ghi chú món (ví dụ: không hành)..."
+              placeholder="Ghi chú món (ví dụ: không hành, ít cay)..."
               value="${item.note || ''}"
-              class="item-note-input mt-1.5 w-full max-w-xs h-7 px-2.5 rounded-lg bg-surface-container-low border border-surface-container-high text-[11px] text-on-surface focus:outline-none focus:border-primary-container"
+              class="item-note-input mt-1.5 w-full max-w-sm h-7 px-2.5 rounded-lg bg-surface-container-low border border-surface-container-high text-[11px] text-on-surface placeholder:text-secondary/60 focus:outline-none focus:border-primary-container"
               data-dish-id="${item.dishId}"
             />
           </div>
         </div>
 
-        <div class="flex items-center justify-between sm:justify-end gap-4 flex-shrink-0">
-          <!-- Quantity Controls -->
-          <div class="flex items-center border border-surface-container-high rounded-xl bg-surface-container-low overflow-hidden">
-            <button type="button" class="qty-btn-minus w-8 h-8 flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer" data-dish-id="${item.dishId}">
+        <div class="flex items-center justify-between sm:justify-end gap-3 sm:gap-4 flex-shrink-0">
+          <!-- Quantity Controls: - [qty] + -->
+          <div class="flex items-center border border-surface-container-high rounded-xl bg-surface-container-low overflow-hidden shadow-xs">
+            <button
+              type="button"
+              class="qty-btn-minus w-8 h-8 flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+              data-dish-id="${item.dishId}"
+              title="${item.quantity === 1 ? 'Xóa món khỏi giỏ hàng' : 'Giảm 1 số lượng'}"
+            >
               <span class="material-symbols-outlined text-[16px]">remove</span>
             </button>
-            <span class="w-8 text-center text-xs font-bold text-on-surface">${item.quantity}</span>
-            <button type="button" class="qty-btn-plus w-8 h-8 flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer" data-dish-id="${item.dishId}">
+            <span class="w-8 text-center text-xs font-black text-on-surface">${item.quantity}</span>
+            <button
+              type="button"
+              class="qty-btn-plus w-8 h-8 flex items-center justify-center text-on-surface hover:bg-surface-container-high transition-colors cursor-pointer"
+              data-dish-id="${item.dishId}"
+              title="Tăng 1 số lượng"
+            >
               <span class="material-symbols-outlined text-[16px]">add</span>
             </button>
           </div>
 
-          <!-- Total for item -->
-          <div class="text-right min-w-[80px]">
-            <span class="text-xs font-bold text-on-surface">${formatVND(itemTotal)}</span>
+          <!-- Total for item: Thành tiền -->
+          <div class="text-right min-w-[90px]">
+            <span class="text-[10px] text-secondary block sm:hidden">Thành tiền:</span>
+            <span class="text-xs sm:text-sm font-black text-on-surface">${formatVND(itemTotal)}</span>
           </div>
 
           <!-- Remove Button -->
-          <button type="button" class="item-remove-btn p-1.5 rounded-lg text-secondary hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer" data-dish-id="${item.dishId}" title="Xóa món">
+          <button
+            type="button"
+            class="item-remove-btn p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-secondary hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer flex items-center gap-1"
+            data-dish-id="${item.dishId}"
+            title="Xóa món khỏi giỏ hàng"
+          >
             <span class="material-symbols-outlined text-[18px]">delete</span>
+            <span class="text-xs font-semibold sm:hidden">Xóa</span>
           </button>
         </div>
       `;
 
       // Event listeners for item
+      // Nút giảm số lượng: nếu còn 1 thì hỏi xóa, nếu > 1 thì giảm
       itemEl.querySelector('.qty-btn-minus')?.addEventListener('click', () => {
-        updateQuantity(item.dishId, -1);
-        renderCart();
+        if (item.quantity > 1) {
+          updateQuantity(item.dishId, -1);
+          renderCart();
+        } else {
+          confirmDeleteItem(item);
+        }
       });
 
+      // Nút tăng số lượng
       itemEl.querySelector('.qty-btn-plus')?.addEventListener('click', () => {
         updateQuantity(item.dishId, 1);
         renderCart();
       });
 
+      // Nút xóa món
       itemEl.querySelector('.item-remove-btn')?.addEventListener('click', () => {
-        removeItem(item.dishId);
-        toast.info(`Đã xóa "${item.name}" khỏi giỏ hàng.`);
-        renderCart();
+        confirmDeleteItem(item);
       });
 
+      // Thay đổi ghi chú món
       const noteInput = itemEl.querySelector('.item-note-input');
       noteInput?.addEventListener('change', (e) => {
         const cartCurrent = getCart();
-        const curItem = cartCurrent.items.find(i => Number(i.dishId) === Number(item.dishId));
+        const curItem = cartCurrent.items.find(i => String(i.dishId) === String(item.dishId));
         if (curItem) {
           curItem.note = e.target.value.trim();
           saveCart(cartCurrent);
@@ -630,4 +713,3 @@ function formatDateTime(iso) {
   const two = n => String(n).padStart(2, '0');
   return `${two(d.getDate())}/${two(d.getMonth() + 1)}/${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`;
 }
-
