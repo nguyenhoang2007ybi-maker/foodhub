@@ -77,7 +77,7 @@
 
       <a href="/explore.html" class="hidden sm:inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:text-primary-container transition-colors">
         <span class="material-symbols-outlined text-[16px]">arrow_back</span>
-        <span>Tiếp tục tìm quán</span>
+        <span>Tiếp tục mua sắm</span>
       </a>
     </div>
 
@@ -95,7 +95,7 @@
         </p>
         <a href="/explore.html" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-md hover:bg-primary-container transition-all">
           <span class="material-symbols-outlined text-[18px]">restaurant_menu</span>
-          <span>Khám phá món ngon ngay</span>
+          <span>Tiếp tục mua sắm</span>
         </a>
       </div>
 
@@ -120,10 +120,16 @@
             </div>
           </div>
 
-          <button id="clear-cart-btn" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors self-end sm:self-auto cursor-pointer">
-            <span class="material-symbols-outlined text-[16px]">delete_sweep</span>
-            <span>Xóa toàn bộ giỏ</span>
-          </button>
+          <div class="flex items-center gap-3 self-end sm:self-auto">
+            <a href="/explore.html" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-secondary hover:text-primary hover:bg-surface-container rounded-xl transition-colors">
+              <span class="material-symbols-outlined text-[16px]">travel_explore</span>
+              <span>Đổi quán khác</span>
+            </a>
+            <button id="clear-cart-btn" type="button" class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors cursor-pointer">
+              <span class="material-symbols-outlined text-[16px]">delete_sweep</span>
+              <span>Xóa toàn bộ giỏ</span>
+            </button>
+          </div>
         </div>
 
         <!-- MAIN LAYOUT: ITEMS LIST + CHECKOUT SUMMARY -->
@@ -132,22 +138,28 @@
           <!-- LEFT COLUMN: CART ITEMS (7 cols) -->
           <div class="lg:col-span-7 space-y-4">
             <div class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-5 sm:p-6 shadow-sm">
-              <h3 class="text-base font-bold text-on-surface mb-4 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-[20px]">list_alt</span>
-                <span>Danh sách món đã chọn (<span id="cart-items-count">0</span>)</span>
-              </h3>
+              <div class="flex items-center justify-between mb-4 pb-3 border-b border-surface-container-high">
+                <h3 class="text-base font-bold text-on-surface flex items-center gap-2">
+                  <span class="material-symbols-outlined text-primary text-[20px]">list_alt</span>
+                  <span>Danh sách món đã chọn (<span id="cart-items-count">0</span>)</span>
+                </h3>
+                <span class="text-xs text-secondary hidden sm:inline">Thay đổi số lượng hoặc xóa món tùy ý</span>
+              </div>
 
               <div id="cart-items-list" class="divide-y divide-surface-container-high">
                 <!-- Items populated dynamically by JS -->
               </div>
 
-              <!-- Continue Shopping Link -->
-              <div class="mt-6 pt-4 border-t border-surface-container-high flex items-center justify-between">
+              <!-- Continue Shopping Actions -->
+              <div class="mt-6 pt-4 border-t border-surface-container-high flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <a id="cart-back-to-menu" href="#" class="text-xs font-semibold text-primary hover:underline inline-flex items-center gap-1">
                   <span class="material-symbols-outlined text-[16px]">arrow_back</span>
                   <span>Thêm món khác từ thực đơn quán</span>
                 </a>
-                <span class="text-xs text-secondary">Tất cả món được làm nóng tươi mới</span>
+                <a href="/explore.html" class="inline-flex items-center gap-1.5 text-xs font-bold text-secondary hover:text-primary transition-colors">
+                  <span class="material-symbols-outlined text-[16px]">storefront</span>
+                  <span>Tiếp tục mua sắm</span>
+                </a>
               </div>
             </div>
           </div>
@@ -232,11 +244,11 @@
               </div>
             </div>
 
-            <!-- CHECKOUT FORM CARD -->
+            <!-- CHECKOUT CTA CARD -->
             <div class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-5 sm:p-6 shadow-sm">
-              <h3 class="text-base font-bold text-on-surface mb-4 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-[20px]">local_shipping</span>
-                <span>Thông tin giao hàng & Thanh toán</span>
+              <h3 class="text-base font-bold text-on-surface mb-3 flex items-center gap-2">
+                <span class="material-symbols-outlined text-primary text-[20px]">rocket_launch</span>
+                <span>Sẵn sàng đặt hàng?</span>
               </h3>
 
               <!-- Auth Notice if Guest -->
@@ -245,83 +257,44 @@
                 <div class="flex-1">
                   <p class="font-bold">Bạn chưa đăng nhập!</p>
                   <p class="text-[11px] text-amber-700 mt-0.5">Vui lòng đăng nhập để lưu và theo dõi trạng thái đơn hàng của bạn.</p>
-                  <a href="/login.html?returnUrl=%2Fcart.html" class="inline-block mt-1.5 text-xs font-bold text-amber-900 underline hover:text-black">Đăng nhập ngay</a>
+                  <a href="/login.html?returnUrl=%2Fcheckout.html" class="inline-block mt-1.5 text-xs font-bold text-amber-900 underline hover:text-black">Đăng nhập ngay</a>
                 </div>
               </div>
 
-              <form id="checkout-form" class="space-y-4">
-                <div>
-                  <label for="order-recipient-name" class="block text-xs font-bold text-on-surface mb-1">Họ và tên người nhận <span class="text-rose-500">*</span></label>
-                  <input
-                    id="order-recipient-name"
-                    type="text"
-                    required
-                    minlength="2"
-                    placeholder="Nguyễn Văn A"
-                    class="w-full h-10 px-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container"
-                  />
-                </div>
+              <ul class="space-y-2 text-xs text-secondary mb-5">
+                <li class="flex items-start gap-2">
+                  <span class="material-symbols-outlined text-primary text-[18px] flex-shrink-0">local_shipping</span>
+                  <span>Điền thông tin người nhận và địa chỉ giao hàng chi tiết ở bước tiếp theo.</span>
+                </li>
+                <li class="flex items-start gap-2">
+                  <span class="material-symbols-outlined text-primary text-[18px] flex-shrink-0">mark_email_read</span>
+                  <span>Xác nhận email bằng mã OTP để bảo đảm nhận được thông tin đơn hàng.</span>
+                </li>
+              </ul>
 
-                <div>
-                  <label for="order-recipient-phone" class="block text-xs font-bold text-on-surface mb-1">Số điện thoại liên hệ <span class="text-rose-500">*</span></label>
-                  <input
-                    id="order-recipient-phone"
-                    type="tel"
-                    required
-                    pattern="^(0|\+84)[3|5|7|8|9][0-9]{8}$"
-                    placeholder="0912345678"
-                    class="w-full h-10 px-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container"
-                  />
-                  <p class="text-[10px] text-secondary mt-1">Tài xế sẽ gọi số này để giao hàng</p>
-                </div>
-
-                <div>
-                  <label for="order-delivery-address" class="block text-xs font-bold text-on-surface mb-1">Địa chỉ nhận hàng chi tiết <span class="text-rose-500">*</span></label>
-                  <textarea
-                    id="order-delivery-address"
-                    required
-                    minlength="5"
-                    rows="2"
-                    placeholder="Số nhà, ngõ/ngách, tên đường, phường/xã, quận..."
-                    class="w-full p-3 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container"
-                  ></textarea>
-                </div>
-
-                <div>
-                  <label for="order-note" class="block text-xs font-bold text-on-surface mb-1">Ghi chú cho quán / Tài xế (Không bắt buộc)</label>
-                  <input
-                    id="order-note"
-                    type="text"
-                    placeholder="Ví dụ: Cho ít cay, nhiều đá, để ở bàn lễ tân..."
-                    class="w-full h-10 px-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container"
-                  />
-                </div>
-
-                <!-- Payment Method -->
-                <div>
-                  <label class="block text-xs font-bold text-on-surface mb-1.5">Phương thức thanh toán:</label>
-                  <div class="p-3 rounded-xl border-2 border-primary bg-primary/5 flex items-center justify-between cursor-pointer">
-                    <div class="flex items-center gap-2.5">
-                      <span class="material-symbols-outlined text-primary text-[20px]">payments</span>
-                      <div>
-                        <p class="text-xs font-bold text-on-surface">Thanh toán tiền mặt khi nhận hàng (COD)</p>
-                        <p class="text-[11px] text-secondary">Kiểm tra món ăn trước khi trả tiền cho shipper</p>
-                      </div>
-                    </div>
-                    <span class="material-symbols-outlined text-primary text-[20px]">radio_button_checked</span>
-                  </div>
-                </div>
-
-                <!-- Submit Button -->
-                <button
-                  id="submit-order-btn"
-                  type="submit"
-                  class="w-full h-12 rounded-2xl bg-primary hover:bg-primary-container text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+              <!-- Action buttons: Tiếp tục mua sắm & Tiến hành thanh toán -->
+              <div class="flex flex-col sm:flex-row gap-3">
+                <a
+                  href="/explore.html"
+                  class="w-full sm:w-1/2 h-12 rounded-2xl bg-surface-container-low hover:bg-surface-container text-on-surface font-bold text-xs sm:text-sm border border-surface-container-high transition-all flex items-center justify-center gap-1.5 cursor-pointer"
                 >
-                  <span class="material-symbols-outlined text-[20px]">check_circle</span>
-                  <span>Xác nhận đặt hàng ngay</span>
+                  <span class="material-symbols-outlined text-[18px]">storefront</span>
+                  <span>Tiếp tục mua sắm</span>
+                </a>
+
+                <button
+                  id="proceed-to-checkout-btn"
+                  type="button"
+                  class="w-full sm:w-1/2 h-12 rounded-2xl bg-primary hover:bg-primary-container text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.99]"
+                >
+                  <span>Tiến hành thanh toán</span>
+                  <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
                 </button>
-              </form>
+              </div>
+
+              <p class="text-[11px] text-secondary text-center mt-3">
+                Thông tin giao hàng và xác nhận email sẽ được nhập ở trang thanh toán.
+              </p>
             </div>
 
           </div>
@@ -366,7 +339,7 @@
         <h3 class="text-base font-bold text-on-surface mb-2">Bạn chưa có đơn hàng nào</h3>
         <p class="text-xs text-secondary leading-relaxed mb-6">Các món ngon nóng hổi từ hàng trăm quán ăn chất lượng đang chờ đón bạn!</p>
         <a href="/explore.html" class="inline-flex items-center gap-2 px-6 py-2.5 rounded-full bg-primary text-white font-bold text-xs shadow hover:bg-primary-container transition-all">
-          <span>Khám phá quán ăn</span>
+          <span>Tiếp tục mua sắm</span>
         </a>
       </div>
 
@@ -377,6 +350,27 @@
     </div>
 
   </main>
+
+  <!-- MODAL: XÁC NHẬN XÓA 1 MÓN ĂN KHỎI GIỎ HÀNG -->
+  <div id="delete-item-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container-lowest rounded-3xl max-w-sm w-full p-6 shadow-2xl border border-surface-container-high animate-in fade-in zoom-in-95 text-center">
+      <div class="w-14 h-14 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto mb-4">
+        <span class="material-symbols-outlined text-3xl">delete</span>
+      </div>
+      <h3 class="text-base font-bold text-on-surface mb-2">Xóa món khỏi giỏ hàng?</h3>
+      <p class="text-xs text-secondary mb-6 leading-relaxed">
+        Bạn có chắc chắn muốn xóa món <span id="delete-item-name" class="font-bold text-on-surface"></span> khỏi giỏ hàng không?
+      </p>
+      <div class="flex items-center justify-center gap-3">
+        <button id="cancel-delete-item-btn" type="button" class="h-10 px-5 rounded-xl text-xs font-semibold text-secondary hover:bg-surface-container-low transition-colors cursor-pointer">
+          Hủy bỏ
+        </button>
+        <button id="confirm-delete-item-btn" type="button" class="h-10 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow transition-all cursor-pointer">
+          Xác nhận xóa
+        </button>
+      </div>
+    </div>
+  </div>
 
   <!-- MODAL: XÁC NHẬN XÓA TOÀN BỘ GIỎ HÀNG -->
   <div id="clear-cart-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">

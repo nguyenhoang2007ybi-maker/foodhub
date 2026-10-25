@@ -27,6 +27,7 @@ export default defineConfig({
         profile: resolve(__dirname, 'profile.html'),
         admin: resolve(__dirname, 'admin.html'),
         cart: resolve(__dirname, 'cart.html'),
+        checkout: resolve(__dirname, 'checkout.html'),
         cartDetail: resolve(__dirname, 'cart-detail.html')
       }
     }

@@ -22,6 +22,7 @@ const initialSchema = {
   favorites: [],
   orders: [],
   carts: [],
+  emailVerifications: {},
   settings: {
     siteName: 'FoodHub',
     slogan: 'Khám phá quán ăn ngon quanh bạn',
@@ -39,6 +40,7 @@ export function getDb() {
   if (dbCache) {
     if (!Array.isArray(dbCache.orders)) dbCache.orders = [];
     if (!Array.isArray(dbCache.carts)) dbCache.carts = [];
+    if (!dbCache.emailVerifications || typeof dbCache.emailVerifications !== 'object') dbCache.emailVerifications = {};
     return dbCache;
   }
 
@@ -48,6 +50,7 @@ export function getDb() {
       dbCache = JSON.parse(content);
       if (!Array.isArray(dbCache.orders)) dbCache.orders = [];
       if (!Array.isArray(dbCache.carts)) dbCache.carts = [];
+      if (!dbCache.emailVerifications || typeof dbCache.emailVerifications !== 'object') dbCache.emailVerifications = {};
       return dbCache;
     } catch (err) {
       console.error('Lỗi đọc database file, sử dụng schema mặc định:', err);
