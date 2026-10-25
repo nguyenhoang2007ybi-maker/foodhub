@@ -82,6 +82,29 @@
   ],
   "restaurants": [
     {
+      "id": 9,
+      "name": "fsfafs11111",
+      "category": "Món nướng",
+      "address": "âfafsfafffà",
+      "area": "Hoàn Kiếm",
+      "price": "50.000đ - 100.000đ",
+      "minPrice": 50000,
+      "maxPrice": 100000,
+      "image": "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=600&q=80",
+      "gallery": [],
+      "description": "fnaka",
+      "openingTime": "07:00",
+      "closingTime": "22:00",
+      "open24": false,
+      "openingHours": "07:00 - 22:00",
+      "phone": "0901234567",
+      "rating": 5,
+      "reviewsCount": 0,
+      "menu": [],
+      "featured": false,
+      "createdAt": "2026-10-18T16:38:39.784Z"
+    },
+    {
       "id": 1,
       "name": "Phở Thìn Lò Đúc",
       "category": "Phở",
@@ -142,8 +165,8 @@
       "description": "Nổi tiếng khắp thế giới sau khi Tổng thống Obama ghé thăm thưởng thức cùng đầu bếp Anthony Bourdain năm 2016. Chả nướng than hoa thơm lừng chấm cùng nước mắm chua ngọt thanh tao.",
       "openingHours": "08:00 - 20:30",
       "phone": "024 3943 4106",
-      "rating": 4.8,
-      "reviewsCount": 3,
+      "rating": 4.9,
+      "reviewsCount": 4,
       "featured": true,
       "menu": [
         {
