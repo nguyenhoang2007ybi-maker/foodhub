@@ -1,13 +1,76 @@
-import { Router } from 'express';
-import { getDb, saveDb } from '../db.js';
+﻿import { Router } from 'express';
+import { getDb, saveDb, parsePriceNumber } from '../db.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import { isEmailVerified, consumeEmailVerification } from './email.js';
+import {
+  ORDER_STATUSES,
+  canTransitionOrderStatus,
+  getAllowedNextStatuses,
+  getOrderStatusLabel,
+  isOrderStatus,
+  normalizeOrderStatus
+} from '../../shared/orderStatus.js';
+import {
+  CANCELLABLE_ORDER_STATUSES,
+  canActorCancelOrderStatus,
+  getCancelActorLabel,
+  resolveCancellationInput
+} from '../../shared/orderCancellation.js';
 
 const router = Router();
 
-// Các phương thức thanh toán được hệ thống hỗ trợ
-const VALID_PAYMENT_METHODS = ['COD', 'BANKING'];
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const RESTAURANT_ROLES = new Set(['restaurant', 'restaurant_owner', 'restaurant_manager']);
+
+function toNumericIdList(value) {
+  if (Array.isArray(value)) {
+    return value
+      .map(item => Number(item))
+      .filter(item => Number.isFinite(item));
+  }
+  if (value === undefined || value === null || String(value).trim() === '') {
+    return [];
+  }
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? [parsed] : [];
+}
+
+function getManagedRestaurantIds(user, db) {
+  if (!user) return [];
+  const ids = new Set([
+    ...toNumericIdList(user.restaurantId),
+    ...toNumericIdList(user.restaurantIds),
+    ...toNumericIdList(user.managedRestaurantIds)
+  ]);
+
+  (db.restaurants || []).forEach(restaurant => {
+    const restaurantId = Number(restaurant.id);
+    const ownerId = Number(restaurant.ownerId);
+    const managerId = Number(restaurant.managerId);
+    const managerIds = toNumericIdList(restaurant.managerIds);
+    if (ownerId === user.id || managerId === user.id || managerIds.includes(user.id)) {
+      ids.add(restaurantId);
+    }
+  });
+
+  return [...ids];
+}
+
+function canManageRestaurant(user, restaurantId, db) {
+  if (!user) return false;
+  if (user.role === 'admin') return true;
+  if (!RESTAURANT_ROLES.has(user.role)) return false;
+  return getManagedRestaurantIds(user, db).includes(Number(restaurantId));
+}
+
+function resolveCancelActor(user) {
+  if (!user) return '';
+  if (user.role === 'admin') return 'admin';
+  if (RESTAURANT_ROLES.has(user.role)) return 'restaurant';
+  return 'customer';
+}
+
+function findOrderById(db, orderId) {
+  return (db.orders || []).find(o => o.id === orderId || o.code === orderId);
+}
 
 // Mã giảm giá hợp lệ của hệ thống
 const VALID_COUPONS = {
@@ -121,8 +184,45 @@ router.post('/', authenticateToken, (req, res) => {
     const verifiedItems = [];
 
     for (const item of items) {
-      const dishId = (item.dishId !== undefined && item.dishId !== null) ? item.dishId : item.id;
-      const dishInMenu = findMenuItem(restaurant.menu, item);
+      if (!item || typeof item !== 'object') {
+        return res.status(400).json({
+          success: false,
+          message: 'Dữ liệu món ăn trong giỏ hàng không hợp lệ.'
+        });
+      }
+
+      const itemRestaurantId = item.restaurantId === undefined || item.restaurantId === null ||
+        String(item.restaurantId).trim() === ''
+        ? restId
+        : Number(item.restaurantId);
+      if (!Number.isFinite(itemRestaurantId) || itemRestaurantId !== restId) {
+        return res.status(400).json({
+          success: false,
+          message: `Món "${item.name || 'đã chọn'}" thuộc quán khác, không thể đặt tại ${restaurant.name}.`
+        });
+      }
+
+      const rawDishId = item.dishId ?? item.id;
+      const dishId = Number(rawDishId);
+      const menu = restaurant.menu || [];
+      let dishInMenu = Number.isFinite(dishId) && dishId > 0
+        ? menu.find(m => Number(m.id) === dishId)
+        : null;
+
+      // Giỏ hàng cũ có thể chưa có dishId (dữ liệu menu trước đây thiếu id).
+      // Chỉ dự phòng theo tên chính xác khi id không thuộc một quán khác.
+      if (!dishInMenu && item.name) {
+        const idBelongsToAnotherRestaurant = Number.isFinite(dishId) && dishId > 0 &&
+          db.restaurants.some(r =>
+            Number(r.id) !== restId &&
+            Array.isArray(r.menu) &&
+            r.menu.some(m => Number(m.id) === dishId)
+          );
+
+        if (!idBelongsToAnotherRestaurant) {
+          dishInMenu = menu.find(m => m.name === item.name);
+        }
+      }
 
       if (!dishInMenu) {
         return res.status(400).json({
@@ -138,7 +238,13 @@ router.post('/', authenticateToken, (req, res) => {
         });
       }
 
-      const quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
+      const quantity = Number(item.quantity);
+      if (!Number.isInteger(quantity) || quantity < 1) {
+        return res.status(400).json({
+          success: false,
+          message: `Số lượng món "${dishInMenu.name}" không hợp lệ.`
+        });
+      }
       if (quantity > 99) {
         return res.status(400).json({
           success: false,
@@ -147,11 +253,21 @@ router.post('/', authenticateToken, (req, res) => {
       }
 
       // Lấy giá chuẩn từ cơ sở dữ liệu backend
-      const unitPrice = dishInMenu.priceNum || parsePriceNumber(dishInMenu.price) || 0;
+      const unitPrice = Number(dishInMenu.priceNum) || parsePriceNumber(dishInMenu.price);
       if (unitPrice <= 0) {
         return res.status(400).json({
           success: false,
           message: `Món "${dishInMenu.name}" có giá không hợp lệ để đặt hàng trực tuyến.`
+        });
+      }
+
+      const hasClientPrice = item.priceNum !== undefined && item.priceNum !== null &&
+        String(item.priceNum).trim() !== '';
+      const clientPrice = Number(item.priceNum);
+      if (hasClientPrice && (!Number.isFinite(clientPrice) || clientPrice !== unitPrice)) {
+        return res.status(400).json({
+          success: false,
+          message: `Giá món "${dishInMenu.name}" đã thay đổi. Vui lòng tải lại giỏ hàng trước khi đặt.`
         });
       }
 
@@ -160,7 +276,8 @@ router.post('/', authenticateToken, (req, res) => {
 
       const menuIndex = (restaurant.menu || []).indexOf(dishInMenu);
       verifiedItems.push({
-        dishId: dishInMenu.id !== undefined ? dishInMenu.id : menuIndex,
+        dishId: dishInMenu.id,
+        restaurantId: restaurant.id,
         name: dishInMenu.name,
         price: dishInMenu.price,
         priceNum: unitPrice,
@@ -288,7 +405,52 @@ router.get('/my', authenticateToken, (req, res) => {
   }
 });
 
-// 3. Khách hàng kiểm tra chi tiết đơn hàng
+// 3. Lấy danh sách đơn hàng thuộc quán mà tài khoản chủ quán được quản lý
+// GET /api/orders/restaurant/my
+router.get('/restaurant/my', authenticateToken, (req, res) => {
+  try {
+    const db = getDb();
+    if (resolveCancelActor(req.user) !== 'restaurant') {
+      return res.status(403).json({
+        success: false,
+        message: 'Chức năng này chỉ dành cho tài khoản chủ quán.'
+      });
+    }
+
+    const restaurantIds = getManagedRestaurantIds(req.user, db);
+    if (restaurantIds.length === 0) {
+      return res.status(403).json({
+        success: false,
+        message: 'Tài khoản của bạn chưa được gán quyền quản lý quán ăn nào.'
+      });
+    }
+
+    const orders = (db.orders || [])
+      .filter(order => restaurantIds.includes(Number(order.restaurantId)))
+      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    const restaurants = (db.restaurants || [])
+      .filter(restaurant => restaurantIds.includes(Number(restaurant.id)))
+      .map(restaurant => ({
+        id: restaurant.id,
+        name: restaurant.name,
+        address: restaurant.address,
+        image: restaurant.image
+      }));
+
+    res.json({
+      success: true,
+      data: orders,
+      total: orders.length,
+      restaurants
+    });
+  } catch (error) {
+    console.error('Lỗi lấy danh sách đơn hàng của quán:', error);
+    res.status(500).json({ success: false, message: 'Lỗi máy chủ khi tải đơn hàng của quán.' });
+  }
+});
+
+// 4. Khách hàng kiểm tra chi tiết đơn hàng
 // GET /api/orders/:id
 router.get('/:id', authenticateToken, (req, res) => {
   try {
@@ -300,8 +462,13 @@ router.get('/:id', authenticateToken, (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng.' });
     }
 
-    // Bảo mật: Người dùng chỉ được xem đơn hàng của chính mình (trừ Admin)
-    if (order.userId !== req.user.id && req.user.role !== 'admin') {
+    // Bảo mật: Khách chỉ xem đơn của mình, quán chỉ xem đơn thuộc quán mình quản lý, Admin xem tất cả
+    const canViewOrder =
+      req.user.role === 'admin' ||
+      order.userId === req.user.id ||
+      (RESTAURANT_ROLES.has(req.user.role) && canManageRestaurant(req.user, order.restaurantId, db));
+
+    if (!canViewOrder) {
       return res.status(403).json({ success: false, message: 'Bạn không có quyền xem đơn hàng này.' });
     }
 
@@ -315,40 +482,155 @@ router.get('/:id', authenticateToken, (req, res) => {
   }
 });
 
-// 4. Khách hàng yêu cầu hủy đơn hàng (chỉ khi đơn còn ở trạng thái pending)
-// PATCH /api/orders/:id/cancel
-router.patch('/:id/cancel', authenticateToken, (req, res) => {
+// 5. Hủy đơn hàng (khách hàng / quán / quản trị viên)
+// PATCH hoặc POST /api/orders/:id/cancel
+function cancelOrderHandler(req, res) {
   try {
     const db = getDb();
     const orderId = req.params.id;
-    const { reason = 'Khách hàng thay đổi ý định' } = req.body;
+    const order = findOrderById(db, orderId);
 
-    const order = (db.orders || []).find(o => o.id === orderId || o.code === orderId);
     if (!order) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng.' });
     }
 
-    if (order.userId !== req.user.id && req.user.role !== 'admin') {
-      return res.status(403).json({ success: false, message: 'Bạn không có quyền thao tác trên đơn hàng này.' });
+    const actor = resolveCancelActor(req.user);
+    if (!actor) {
+      return res.status(403).json({ success: false, message: 'Bạn không có quyền hủy đơn hàng này.' });
     }
 
-    if (order.status !== 'pending') {
-      return res.status(400).json({
+    if (actor === 'customer' && order.userId !== req.user.id) {
+      return res.status(403).json({
         success: false,
-        message: 'Đơn hàng đã được xác nhận hoặc đang chuẩn bị, không thể tự hủy. Vui lòng liên hệ hotline quán.'
+        message: 'Bạn chỉ được hủy đơn hàng thuộc tài khoản của mình.'
       });
     }
 
+    if (actor === 'restaurant' && !canManageRestaurant(req.user, order.restaurantId, db)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Bạn không có quyền hủy đơn hàng của quán khác.'
+      });
+    }
+
+    const currentStatus = normalizeOrderStatus(order.status);
+    if (currentStatus === 'cancelled') {
+      return res.status(409).json({
+        success: false,
+        code: 'ORDER_ALREADY_CANCELLED',
+        message: 'Đơn hàng đã bị hủy trước đó.',
+        currentStatus: order.status
+      });
+    }
+
+    if (currentStatus === 'completed') {
+      return res.status(409).json({
+        success: false,
+        code: 'ORDER_COMPLETED',
+        message: 'Đơn hàng đã hoàn thành, không thể hủy.',
+        currentStatus: order.status
+      });
+    }
+
+    if (!canActorCancelOrderStatus(currentStatus)) {
+      return res.status(409).json({
+        success: false,
+        code: 'ORDER_NOT_CANCELLABLE',
+        message: `Không thể hủy đơn hàng đang ở trạng thái "${getOrderStatusLabel(currentStatus)}".`,
+        currentStatus: order.status,
+        allowedStatuses: [...CANCELLABLE_ORDER_STATUSES]
+      });
+    }
+
+    const hasExpectedStatus = req.body?.expectedStatus !== undefined &&
+      req.body?.expectedStatus !== null &&
+      String(req.body.expectedStatus).trim() !== '';
+    if (hasExpectedStatus && normalizeOrderStatus(req.body.expectedStatus) !== currentStatus) {
+      return res.status(409).json({
+        success: false,
+        code: 'ORDER_STATUS_CHANGED',
+        message: `Trạng thái đơn đã thay đổi thành "${getOrderStatusLabel(order.status)}". Vui lòng làm mới và thử lại.`,
+        currentStatus: order.status,
+        expectedStatus: req.body.expectedStatus
+      });
+    }
+
+    const rawReason = req.body?.reason ?? req.body?.cancelReason;
+    const rawNote = req.body?.note ?? req.body?.cancelNote;
+    const cancellation = resolveCancellationInput(actor, rawReason, rawNote);
+
+    if (!cancellation.ok) {
+      return res.status(400).json({
+        success: false,
+        code: 'INVALID_CANCEL_REASON',
+        message: cancellation.message
+      });
+    }
+
+    const now = new Date().toISOString();
+    const previousStatus = currentStatus;
+    const beforeSnapshot = {
+      status: order.status,
+      cancelReason: order.cancelReason,
+      cancelReasonCode: order.cancelReasonCode,
+      cancelNote: order.cancelNote,
+      cancelledBy: order.cancelledBy,
+      cancelledById: order.cancelledById,
+      cancelledByName: order.cancelledByName,
+      cancelledAt: order.cancelledAt,
+      updatedAt: order.updatedAt,
+      timelineLength: Array.isArray(order.timeline) ? order.timeline.length : 0
+    };
+
+    const actorLabel = getCancelActorLabel(actor);
     order.status = 'cancelled';
-    order.cancelReason = reason;
-    order.updatedAt = new Date().toISOString();
+    order.cancelledBy = actor;
+    order.cancelledById = req.user.id;
+    order.cancelledByName = req.user.name || '';
+    order.cancelReason = cancellation.value.reason;
+    order.cancelReasonCode = cancellation.value.reasonCode;
+    order.cancelNote = cancellation.value.note;
+    order.cancelledAt = now;
+    order.updatedAt = now;
+
+    if (!Array.isArray(order.timeline)) {
+      order.timeline = [];
+    }
+
+    const noteSuffix = cancellation.value.note ? ` - Ghi chú: ${cancellation.value.note}` : '';
     order.timeline.push({
       status: 'cancelled',
-      time: new Date().toISOString(),
-      message: `Đơn hàng đã bị hủy. Lý do: ${reason}`
+      fromStatus: previousStatus,
+      toStatus: 'cancelled',
+      time: now,
+      cancelledAt: now,
+      message: `Đơn hàng đã bị hủy bởi ${actorLabel}. Lý do: ${cancellation.value.reason}${noteSuffix}`,
+      cancelledBy: actor,
+      cancelledById: req.user.id,
+      cancelledByName: req.user.name || '',
+      cancelReason: cancellation.value.reason,
+      cancelReasonCode: cancellation.value.reasonCode,
+      cancelNote: cancellation.value.note
     });
 
-    saveDb();
+    if (!saveDb()) {
+      order.status = beforeSnapshot.status;
+      order.cancelReason = beforeSnapshot.cancelReason;
+      order.cancelReasonCode = beforeSnapshot.cancelReasonCode;
+      order.cancelNote = beforeSnapshot.cancelNote;
+      order.cancelledBy = beforeSnapshot.cancelledBy;
+      order.cancelledById = beforeSnapshot.cancelledById;
+      order.cancelledByName = beforeSnapshot.cancelledByName;
+      order.cancelledAt = beforeSnapshot.cancelledAt;
+      order.updatedAt = beforeSnapshot.updatedAt;
+      if (Array.isArray(order.timeline)) {
+        order.timeline = order.timeline.slice(0, beforeSnapshot.timelineLength);
+      }
+      return res.status(500).json({
+        success: false,
+        message: 'Không thể lưu thông tin hủy đơn. Vui lòng thử lại.'
+      });
+    }
 
     res.json({
       success: true,
@@ -359,9 +641,12 @@ router.patch('/:id/cancel', authenticateToken, (req, res) => {
     console.error('Lỗi hủy đơn hàng:', error);
     res.status(500).json({ success: false, message: 'Lỗi máy chủ khi hủy đơn hàng.' });
   }
-});
+}
 
-// 5. Quản trị viên: Lấy toàn bộ đơn hàng hệ thống
+router.patch('/:id/cancel', authenticateToken, cancelOrderHandler);
+router.post('/:id/cancel', authenticateToken, cancelOrderHandler);
+
+// 6. Quản trị viên: Lấy toàn bộ đơn hàng hệ thống
 // GET /api/orders/admin/all
 router.get('/admin/all', authenticateToken, requireAdmin, (req, res) => {
   try {
@@ -401,7 +686,7 @@ router.get('/admin/all', authenticateToken, requireAdmin, (req, res) => {
   }
 });
 
-// 6. Quản trị viên: Lấy thống kê đơn hàng
+// 7. Quản trị viên: Lấy thống kê đơn hàng
 // GET /api/orders/admin/stats
 router.get('/admin/stats', authenticateToken, requireAdmin, (req, res) => {
   try {
@@ -431,25 +716,62 @@ router.get('/admin/stats', authenticateToken, requireAdmin, (req, res) => {
   }
 });
 
-// 7. Quản trị viên: Cập nhật trạng thái đơn hàng
+// 8. Quản trị viên: Cập nhật trạng thái đơn hàng
 // PATCH /api/orders/:id/status
 router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
   try {
     const db = getDb();
     const orderId = req.params.id;
-    const { status, note } = req.body;
+    const { status, note, expectedStatus } = req.body;
+    const nextStatus = normalizeOrderStatus(status);
 
-    const validStatuses = ['pending', 'confirmed', 'preparing', 'shipping', 'completed', 'cancelled'];
-    if (!validStatuses.includes(status)) {
+    if (!isOrderStatus(nextStatus)) {
       return res.status(400).json({
         success: false,
-        message: `Trạng thái không hợp lệ. Cho phép: ${validStatuses.join(', ')}`
+        code: 'INVALID_NEXT_STATUS',
+        message: `Trạng thái không hợp lệ. Cho phép: ${ORDER_STATUSES.join(', ')}`
       });
     }
 
     const order = (db.orders || []).find(o => o.id === orderId || o.code === orderId);
     if (!order) {
       return res.status(404).json({ success: false, message: 'Không tìm thấy đơn hàng.' });
+    }
+
+    if (nextStatus === 'cancelled') {
+      return res.status(400).json({
+        success: false,
+        code: 'CANCEL_REQUIRES_REASON',
+        message: 'Hủy đơn phải thực hiện qua chức năng hủy đơn và bắt buộc nhập lý do hợp lệ.'
+      });
+    }
+
+    const hasExpectedStatus = expectedStatus !== undefined &&
+      expectedStatus !== null &&
+      String(expectedStatus).trim() !== '';
+    const expected = hasExpectedStatus ? normalizeOrderStatus(expectedStatus) : '';
+
+    if (hasExpectedStatus && expected !== normalizeOrderStatus(order.status)) {
+      return res.status(409).json({
+        success: false,
+        code: 'ORDER_STATUS_CHANGED',
+        message: `Trạng thái đơn đã thay đổi thành "${getOrderStatusLabel(order.status)}". Vui lòng làm mới và thử lại.`,
+        currentStatus: order.status,
+        expectedStatus: expected,
+        allowedStatuses: getAllowedNextStatuses(order.status)
+      });
+    }
+
+    const transition = canTransitionOrderStatus(order.status, nextStatus);
+    if (!transition.allowed) {
+      return res.status(transition.statusCode).json({
+        success: false,
+        code: transition.code,
+        message: transition.message,
+        currentStatus: order.status,
+        requestedStatus: nextStatus,
+        allowedStatuses: transition.allowedStatuses
+      });
     }
 
     const statusMessages = {
@@ -461,10 +783,10 @@ router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
       cancelled: 'Đơn hàng đã bị hủy'
     };
 
-    order.status = status;
+    order.status = nextStatus;
     order.updatedAt = new Date().toISOString();
 
-    if (status === 'completed') {
+    if (nextStatus === 'completed') {
       order.paymentStatus = 'paid';
     }
 
@@ -473,16 +795,16 @@ router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
     }
 
     order.timeline.push({
-      status,
+      status: nextStatus,
       time: new Date().toISOString(),
-      message: note ? `Trạng thái: ${statusMessages[status]} (${note})` : statusMessages[status]
+      message: note ? `Trạng thái: ${statusMessages[nextStatus]} (${note})` : statusMessages[nextStatus]
     });
 
     saveDb();
 
     res.json({
       success: true,
-      message: `Đã cập nhật trạng thái đơn sang: ${statusMessages[status]}`,
+      message: `Đã cập nhật trạng thái đơn sang: ${statusMessages[nextStatus]}`,
       data: order
     });
   } catch (error) {

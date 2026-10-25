@@ -459,8 +459,12 @@ function setupCartConflictModal() {
   if (confirmBtn) {
     confirmBtn.onclick = () => {
       if (pendingConflictItem && currentRestaurant) {
-        replaceCartWithDish(pendingConflictItem, currentRestaurant, 1);
-        toast.success(`Đã làm mới giỏ hàng và thêm "${pendingConflictItem.name}"!`);
+        const result = replaceCartWithDish(pendingConflictItem, currentRestaurant, 1);
+        if (!result.success) {
+          toast.error(result.message || 'Không thể thêm món vào giỏ hàng.');
+        } else {
+          toast.success(`Đã làm mới giỏ hàng và thêm "${pendingConflictItem.name}"!`);
+        }
         pendingConflictItem = null;
       }
       if (modal) modal.classList.add('hidden');
@@ -529,6 +533,8 @@ function renderMenu(menuItems) {
           if (newRestEl) newRestEl.textContent = res.newRestaurant.name;
           const modal = document.getElementById('cart-conflict-modal');
           if (modal) modal.classList.remove('hidden');
+        } else if (!res.success) {
+          toast.error(res.message || 'Không thể thêm món vào giỏ hàng.');
         } else {
           toast.success(`Đã thêm "${dish.name}" vào giỏ hàng!`);
           updateFloatingCartBar();

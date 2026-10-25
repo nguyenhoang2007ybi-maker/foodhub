@@ -103,6 +103,10 @@ router.get('/users', (req, res) => {
     role: u.role,
     status: u.status || 'active',
     avatar: u.avatar,
+    restaurantId: u.restaurantId,
+    restaurantIds: u.restaurantIds,
+    managedRestaurantIds: u.managedRestaurantIds,
+    restaurantName: (db.restaurants || []).find(r => Number(r.id) === Number(u.restaurantId))?.name || '',
     createdAt: u.createdAt
   }));
 
@@ -130,11 +134,11 @@ router.get('/users', (req, res) => {
   });
 });
 
-// Cập nhật trạng thái và vai trò của tài khoản
+// Cập nhật trạng thái, vai trò và quán được quản lý của tài khoản
 // PUT /api/admin/users/:id
 router.put('/users/:id', (req, res) => {
   const userId = Number(req.params.id);
-  const { role, status } = req.body;
+  const { role, status, restaurantId } = req.body;
   const db = getDb();
 
   const user = db.users.find(u => u.id === userId);
@@ -150,8 +154,13 @@ router.put('/users/:id', (req, res) => {
     });
   }
 
+  const nextRole = role === undefined ? undefined : String(role).trim();
+  if (nextRole !== undefined && !['admin', 'customer', 'restaurant'].includes(nextRole)) {
+    return res.status(400).json({ success: false, message: 'Vai trò tài khoản không hợp lệ.' });
+  }
+
   // Bảo vệ: Không được hạ quyền nếu là tài khoản admin duy nhất
-  if (user.role === 'admin' && role === 'customer') {
+  if (user.role === 'admin' && nextRole && nextRole !== 'admin') {
     const adminCount = db.users.filter(u => u.role === 'admin' && u.status !== 'blocked').length;
     if (adminCount <= 1) {
       return res.status(400).json({
@@ -161,8 +170,28 @@ router.put('/users/:id', (req, res) => {
     }
   }
 
-  if (role && ['admin', 'customer'].includes(role)) {
-    user.role = role;
+  if (nextRole === 'restaurant') {
+    const rawRestaurantId = restaurantId !== undefined ? restaurantId : user.restaurantId;
+    const assignedRestaurantId = Number(rawRestaurantId);
+    if (!Number.isFinite(assignedRestaurantId) || assignedRestaurantId <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng chọn quán ăn mà tài khoản chủ quán được quản lý.'
+      });
+    }
+
+    const restaurant = db.restaurants.find(r => Number(r.id) === assignedRestaurantId);
+    if (!restaurant) {
+      return res.status(404).json({ success: false, message: 'Quán ăn được gán không tồn tại.' });
+    }
+
+    user.role = 'restaurant';
+    user.restaurantId = assignedRestaurantId;
+  } else if (nextRole) {
+    user.role = nextRole;
+    delete user.restaurantId;
+    delete user.restaurantIds;
+    delete user.managedRestaurantIds;
   }
 
   if (status && ['active', 'blocked'].includes(status)) {
@@ -180,7 +209,9 @@ router.put('/users/:id', (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
-      status: user.status
+      status: user.status,
+      restaurantId: user.restaurantId,
+      restaurantName: (db.restaurants || []).find(r => Number(r.id) === Number(user.restaurantId))?.name || ''
     }
   });
 });

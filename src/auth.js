@@ -41,6 +41,11 @@ export function isAdmin() {
   return Boolean(user && user.role === 'admin');
 }
 
+export function isRestaurant() {
+  const user = getUser();
+  return Boolean(user && ['restaurant', 'restaurant_owner', 'restaurant_manager'].includes(user.role));
+}
+
 export function logout() {
   removeToken();
   removeUser();
@@ -78,6 +83,7 @@ export function initHeader(activeNav = '') {
   const user = getUser();
   const logged = isLoggedIn();
   const adminRole = isAdmin();
+  const restaurantRole = isRestaurant();
 
   const getActiveCls = (key) => activeNav === key 
     ? 'text-primary font-bold border-b-2 border-primary-container pb-1' 
@@ -109,6 +115,7 @@ export function initHeader(activeNav = '') {
             <span>Giỏ hàng</span>
             <span id="header-cart-count" class="header-cart-badge inline-flex items-center justify-center px-1.5 py-0.5 text-xs font-bold bg-primary text-white rounded-full min-w-[20px] text-center leading-none">0</span>
           </a>
+          ${restaurantRole ? `<a class="text-sm font-semibold ${getActiveCls('restaurant')} text-emerald-700 hover:text-emerald-800 flex items-center gap-1" href="/restaurant.html"><span class="material-symbols-outlined text-[16px]">storefront</span>Quản lý quán</a>` : ''}
           ${adminRole ? `<a class="text-sm font-semibold ${getActiveCls('admin')} text-amber-600 hover:text-amber-700 flex items-center gap-1" href="/admin.html"><span class="material-symbols-outlined text-[16px]">admin_panel_settings</span>Quản trị</a>` : ''}
         </nav>
       </div>
@@ -153,8 +160,8 @@ export function initHeader(activeNav = '') {
                 <p class="text-xs text-secondary">Đăng nhập với</p>
                 <p class="text-sm font-bold text-on-surface truncate">${user.name}</p>
                 <div class="mt-1 flex items-center gap-1">
-                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${user.role === 'admin' ? 'bg-amber-100 text-amber-800' : 'bg-primary-container/15 text-primary'}">
-                    ${user.role === 'admin' ? 'Quản trị viên' : 'Khách hàng'}
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${user.role === 'admin' ? 'bg-amber-100 text-amber-800' : restaurantRole ? 'bg-emerald-100 text-emerald-800' : 'bg-primary-container/15 text-primary'}">
+                    ${user.role === 'admin' ? 'Quản trị viên' : restaurantRole ? 'Chủ quán' : 'Khách hàng'}
                   </span>
                 </div>
               </div>
@@ -176,6 +183,12 @@ export function initHeader(activeNav = '') {
                   <span class="material-symbols-outlined text-[18px] text-secondary">receipt_long</span>
                   <span>Đơn hàng của tôi</span>
                 </a>
+                ${restaurantRole ? `
+                  <a href="/restaurant.html" class="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50 transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">storefront</span>
+                    <span>Quản lý quán</span>
+                  </a>
+                ` : ''}
                 ${adminRole ? `
                   <a href="/admin.html" class="flex items-center gap-2.5 px-4 py-2 text-xs font-bold text-amber-600 hover:bg-amber-50 transition-colors">
                     <span class="material-symbols-outlined text-[18px]">admin_panel_settings</span>
@@ -227,6 +240,7 @@ export function initHeader(activeNav = '') {
         <span class="flex items-center gap-2"><span class="material-symbols-outlined text-[18px]">shopping_bag</span>Giỏ hàng</span>
         <span id="mobile-cart-count" class="header-cart-badge px-2 py-0.5 text-xs bg-primary text-white rounded-full">0</span>
       </a>
+      ${restaurantRole ? `<a class="px-3 py-2 rounded-lg text-sm font-bold text-emerald-700 hover:bg-emerald-50" href="/restaurant.html">Quản lý quán</a>` : ''}
       ${adminRole ? `<a class="px-3 py-2 rounded-lg text-sm font-bold text-amber-600 hover:bg-amber-50" href="/admin.html">Quản trị Website</a>` : ''}
     </div>
   `;

@@ -146,6 +146,8 @@
                 <span class="text-xs text-secondary hidden sm:inline">Thay đổi số lượng hoặc xóa món tùy ý</span>
               </div>
 
+              <div id="cart-invalid-warning" class="hidden mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold leading-relaxed"></div>
+
               <div id="cart-items-list" class="divide-y divide-surface-container-high">
                 <!-- Items populated dynamically by JS -->
               </div>
@@ -420,25 +422,32 @@
       </div>
       <h3 class="text-base font-bold text-on-surface mb-2">Hủy đơn hàng <span id="cancel-order-code"></span>?</h3>
       <p class="text-xs text-secondary leading-relaxed mb-4">
-        Đơn hàng chỉ có thể hủy khi quán ăn chưa chuẩn bị món. Vui lòng cho biết lý do hủy đơn:
+        Đơn hàng chỉ có thể hủy khi đang chờ xác nhận hoặc đã xác nhận. Vui lòng cho biết lý do hủy đơn (bắt buộc):
       </p>
 
       <form id="cancel-order-form" class="space-y-4">
         <div>
-          <select id="cancel-reason-select" class="w-full h-10 px-3 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none">
-            <option value="Tôi muốn đổi món / chọn quán khác">Tôi muốn đổi món / chọn quán khác</option>
-            <option value="Thời gian giao hàng lâu hơn dự kiến">Thời gian giao hàng lâu hơn dự kiến</option>
-            <option value="Tôi điền nhầm địa chỉ hoặc số điện thoại">Tôi điền nhầm địa chỉ hoặc số điện thoại</option>
-            <option value="Tôi thay đổi ý định, không muốn ăn nữa">Tôi thay đổi ý định, không muốn ăn nữa</option>
-            <option value="Lý do khác">Lý do khác</option>
+          <label for="cancel-reason-select" class="block text-xs font-bold text-on-surface mb-1">Lý do hủy đơn (*):</label>
+          <select id="cancel-reason-select" required class="w-full h-10 px-3 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none">
+            <option value="">-- Chọn lý do hủy --</option>
           </select>
         </div>
+
+        <div>
+          <label for="cancel-note-input" class="block text-xs font-bold text-on-surface mb-1">
+            Ghi chú bổ sung <span id="cancel-note-required" class="text-rose-600">(bắt buộc khi chọn "Lý do khác")</span>:
+          </label>
+          <textarea id="cancel-note-input" rows="3" maxlength="500" placeholder="Nhập mô tả cụ thể nếu bạn chọn Lý do khác..."
+            class="w-full px-3 py-2 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none resize-none"></textarea>
+        </div>
+
+        <p id="cancel-form-error" class="hidden text-xs font-semibold text-rose-600"></p>
 
         <div class="flex items-center justify-end gap-3 pt-2">
           <button id="close-cancel-modal-btn" type="button" class="h-10 px-4 rounded-xl text-xs font-semibold text-secondary hover:bg-surface-container-low transition-colors">
             Giữ lại đơn
           </button>
-          <button type="submit" class="h-10 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow transition-all cursor-pointer">
+          <button type="submit" class="h-10 px-5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed">
             Xác nhận hủy
           </button>
         </div>

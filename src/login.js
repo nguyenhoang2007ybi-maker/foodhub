@@ -1,7 +1,7 @@
 // FoodHub Login Controller
 import { api } from './api.js';
 import { toast } from './toast.js';
-import { initHeader, initFooter, setToken, setUser, isLoggedIn, isAdmin } from './auth.js';
+import { initHeader, initFooter, setToken, setUser, isLoggedIn, isAdmin, isRestaurant } from './auth.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   initHeader();
@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (isLoggedIn()) {
     if (returnUrl) window.location.href = returnUrl;
     else if (isAdmin()) window.location.href = '/admin.html';
+    else if (isRestaurant()) window.location.href = '/restaurant.html';
     else window.location.href = '/index.html';
     return;
   }
@@ -104,6 +105,8 @@ document.addEventListener('DOMContentLoaded', () => {
               window.location.href = returnUrl;
             } else if (res.user.role === 'admin') {
               window.location.href = '/admin.html';
+            } else if (['restaurant', 'restaurant_owner', 'restaurant_manager'].includes(res.user.role)) {
+              window.location.href = '/restaurant.html';
             } else {
               window.location.href = '/index.html';
             }

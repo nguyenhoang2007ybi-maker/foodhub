@@ -2,9 +2,20 @@
 import { api } from './api.js';
 import { toast } from './toast.js';
 import { requireAdmin, getUser, logout } from './auth.js';
+import {
+  ORDER_STATUS_LABELS,
+  canTransitionOrderStatus,
+  getAllowedNextStatuses,
+  normalizeOrderStatus
+} from '../shared/orderStatus.js';
+import {
+  ADMIN_CANCEL_REASONS,
+  getOrderCancellation
+} from '../shared/orderCancellation.js';
 
 let cachedCategories = [];
 let cachedRestaurants = [];
+let cachedUserRestaurants = [];
 
 // Trạng thái chỉnh sửa giờ trong phiên mở modal
 let hoursTouched = false;
@@ -750,7 +761,13 @@ async function loadUsersManager() {
   tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-secondary">Đang tải danh sách người dùng...</td></tr>`;
 
   try {
-    const res = await api.get('/admin/users');
+    const [res, restaurantsRes] = await Promise.all([
+      api.get('/admin/users'),
+      api.get('/restaurants?limit=all')
+    ]);
+    if (restaurantsRes && restaurantsRes.success && Array.isArray(restaurantsRes.data)) {
+      cachedUserRestaurants = restaurantsRes.data;
+    }
     if (res && res.success && Array.isArray(res.data)) {
       renderUsersTable(res.data);
     }
@@ -787,8 +804,14 @@ function renderUsersTable(users) {
       <td class="p-4">
         <select class="user-role-select bg-surface-container-low border border-surface-container rounded-lg px-2 py-1 text-xs font-semibold ${u.role === 'admin' ? 'text-amber-800 bg-amber-50' : 'text-primary'}" data-id="${u.id}" ${isMe ? 'disabled title="Không thể tự hạ quyền của chính bạn"' : ''}>
           <option value="customer" ${u.role === 'customer' ? 'selected' : ''}>Khách hàng</option>
+          <option value="restaurant" ${u.role === 'restaurant' ? 'selected' : ''}>Chủ quán</option>
           <option value="admin" ${u.role === 'admin' ? 'selected' : ''}>Quản trị viên</option>
         </select>
+        ${u.role === 'restaurant' ? `
+          <button type="button" class="user-restaurant-btn mt-1.5 block text-[11px] font-semibold text-primary hover:underline cursor-pointer" data-id="${u.id}" data-restaurant-id="${u.restaurantId || ''}" title="Đổi quán được quản lý">
+            Quán: ${escapeHtml(u.restaurantName || `#${u.restaurantId || 'Chưa gán'}`)}
+          </button>
+        ` : ''}
       </td>
       <td class="p-4">
         <select class="user-status-select bg-surface-container-low border border-surface-container rounded-lg px-2 py-1 text-xs font-semibold ${u.status === 'blocked' ? 'text-rose-600 bg-rose-50' : 'text-emerald-700 bg-emerald-50'}" data-id="${u.id}" ${isMe ? 'disabled title="Không thể tự khóa tài khoản của chính bạn"' : ''}>
@@ -809,12 +832,63 @@ function renderUsersTable(users) {
     const roleSelect = tr.querySelector('.user-role-select');
     if (roleSelect && !isMe) {
       roleSelect.onchange = async (e) => {
+        const nextRole = e.target.value;
+        const payload = { role: nextRole };
+
+        if (nextRole === 'restaurant') {
+          const restaurantList = cachedUserRestaurants
+            .map(r => `${r.id}: ${r.name}`)
+            .join('\n');
+          const entered = prompt(`Nhập ID quán mà tài khoản này được quản lý:\n${restaurantList}`, u.restaurantId || '');
+          if (entered === null) {
+            e.target.value = u.role;
+            return;
+          }
+          const restaurantId = Number(entered.trim());
+          if (!Number.isFinite(restaurantId) || restaurantId <= 0) {
+            toast.error('ID quán không hợp lệ.');
+            e.target.value = u.role;
+            return;
+          }
+          payload.restaurantId = restaurantId;
+        }
+
         try {
-          const res = await api.put(`/admin/users/${u.id}`, { role: e.target.value });
-          if (res && res.success) toast.success('Cập nhật quyền thành công!');
+          const res = await api.put(`/admin/users/${u.id}`, payload);
+          if (res && res.success) {
+            toast.success('Cập nhật quyền thành công!');
+            loadUsersManager();
+          }
         } catch (err) {
           toast.error(err.message || 'Lỗi cập nhật quyền.');
           loadUsersManager();
+        }
+      };
+    }
+
+    // Đổi quán được quản lý cho tài khoản chủ quán
+    const restaurantBtn = tr.querySelector('.user-restaurant-btn');
+    if (restaurantBtn) {
+      restaurantBtn.onclick = async () => {
+        const restaurantList = cachedUserRestaurants
+          .map(r => `${r.id}: ${r.name}`)
+          .join('\n');
+        const entered = prompt(`Nhập ID quán mà tài khoản này được quản lý:\n${restaurantList}`, u.restaurantId || '');
+        if (entered === null) return;
+        const restaurantId = Number(entered.trim());
+        if (!Number.isFinite(restaurantId) || restaurantId <= 0) {
+          toast.error('ID quán không hợp lệ.');
+          return;
+        }
+
+        try {
+          const res = await api.put(`/admin/users/${u.id}`, { role: 'restaurant', restaurantId });
+          if (res && res.success) {
+            toast.success('Đã cập nhật quán được quản lý.');
+            loadUsersManager();
+          }
+        } catch (err) {
+          toast.error(err.message || 'Lỗi cập nhật quán được quản lý.');
         }
       };
     }
@@ -1173,15 +1247,56 @@ function renderReviewsTable(reviews) {
 // ==========================================
 let cachedAdminOrders = [];
 let currentOrderFilter = 'all';
+let pendingCancelOrder = null;
 
 const ORDER_STATUS_MAP = {
-  pending: { label: 'Chờ xác nhận', cls: 'bg-amber-100 text-amber-800 border-amber-300' },
-  confirmed: { label: 'Đã xác nhận', cls: 'bg-sky-100 text-sky-800 border-sky-300' },
-  preparing: { label: 'Đang nấu', cls: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
-  shipping: { label: 'Đang giao', cls: 'bg-orange-100 text-orange-800 border-orange-300' },
-  completed: { label: 'Hoàn tất', cls: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
-  cancelled: { label: 'Đã hủy', cls: 'bg-rose-100 text-rose-800 border-rose-300' }
+  pending: { label: ORDER_STATUS_LABELS.pending, cls: 'bg-amber-100 text-amber-800 border-amber-300' },
+  confirmed: { label: ORDER_STATUS_LABELS.confirmed, cls: 'bg-sky-100 text-sky-800 border-sky-300' },
+  preparing: { label: ORDER_STATUS_LABELS.preparing, cls: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+  shipping: { label: ORDER_STATUS_LABELS.shipping, cls: 'bg-orange-100 text-orange-800 border-orange-300' },
+  completed: { label: ORDER_STATUS_LABELS.completed, cls: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
+  cancelled: { label: ORDER_STATUS_LABELS.cancelled, cls: 'bg-rose-100 text-rose-800 border-rose-300' }
 };
+
+const ORDER_ACTION_META = {
+  confirmed: { label: 'Xác nhận đơn', cls: 'bg-emerald-600 hover:bg-emerald-700 text-white' },
+  preparing: { label: 'Bắt đầu chuẩn bị', cls: 'bg-sky-600 hover:bg-sky-700 text-white' },
+  shipping: { label: 'Bắt đầu giao hàng', cls: 'bg-indigo-600 hover:bg-indigo-700 text-white' },
+  completed: { label: 'Hoàn thành đơn', cls: 'bg-primary-container hover:bg-primary text-white' },
+  cancelled: { label: 'Hủy đơn', cls: 'bg-rose-100 hover:bg-rose-200 text-rose-700 border border-rose-200' }
+};
+
+function getOrderStatusMeta(status) {
+  const key = normalizeOrderStatus(status);
+  return ORDER_STATUS_MAP[key] || {
+    label: ORDER_STATUS_LABELS[key] || status || 'Không xác định',
+    cls: 'bg-surface-container text-secondary border-surface-container'
+  };
+}
+
+function buildOrderActionButtons(order, compact = true) {
+  const allowed = getAllowedNextStatuses(order.status);
+  if (allowed.length === 0) {
+    return '<span class="text-[11px] text-secondary italic">Đã kết thúc</span>';
+  }
+
+  const sizeCls = compact
+    ? 'px-2.5 py-1.5 text-[11px]'
+    : 'px-3.5 py-2 text-xs';
+
+  return allowed.map(status => {
+    const meta = ORDER_ACTION_META[status];
+    if (!meta) return '';
+    return `
+      <button type="button"
+        class="admin-order-action-btn ${sizeCls} rounded-xl font-bold transition-all cursor-pointer whitespace-nowrap ${meta.cls}"
+        data-order-id="${escapeHtml(order.id)}"
+        data-status="${escapeHtml(status)}">
+        ${meta.label}
+      </button>
+    `;
+  }).join('');
+}
 
 function formatVNDOrder(val) {
   return (Number(val) || 0).toLocaleString('vi-VN') + ' đ';
@@ -1196,6 +1311,16 @@ let orderControlsBound = false;
 function setupOrderControls() {
   if (orderControlsBound) return;
   orderControlsBound = true;
+
+  const cancelReasonSelect = document.getElementById('admin-order-cancel-reason');
+  if (cancelReasonSelect) {
+    cancelReasonSelect.innerHTML = '<option value="">-- Chọn lý do hủy --</option>' +
+      ADMIN_CANCEL_REASONS.map(reason => `
+        <option value="${escapeHtml(reason.code)}" data-requires-note="${reason.requiresNote ? 'true' : 'false'}">
+          ${escapeHtml(reason.label)}${reason.requiresNote ? ' (bắt buộc nhập mô tả)' : ''}
+        </option>
+      `).join('');
+  }
 
   // Refresh button
   document.getElementById('admin-refresh-orders-btn')?.addEventListener('click', async () => {
@@ -1226,6 +1351,101 @@ function setupOrderControls() {
   document.getElementById('admin-order-modal-close')?.addEventListener('click', () => {
     document.getElementById('admin-order-modal')?.classList.add('hidden');
   });
+
+  const showAdminCancelError = (message) => {
+    const errorEl = document.getElementById('admin-order-cancel-error');
+    if (errorEl) {
+      errorEl.textContent = message;
+      errorEl.classList.remove('hidden');
+    }
+    toast.error(message);
+  };
+
+  document.getElementById('admin-order-cancel-close')?.addEventListener('click', closeCancelOrderModal);
+  document.getElementById('admin-order-cancel-dismiss')?.addEventListener('click', closeCancelOrderModal);
+  document.getElementById('admin-order-cancel-confirm')?.addEventListener('click', async () => {
+    const order = pendingCancelOrder;
+    if (!order) return;
+
+    const reasonCode = cancelReasonSelect?.value || '';
+    const selectedOption = cancelReasonSelect?.selectedOptions?.[0];
+    const noteInput = document.getElementById('admin-order-cancel-note');
+    const note = noteInput?.value?.trim() || '';
+
+    if (!reasonCode) {
+      showAdminCancelError('Vui lòng chọn lý do hủy đơn.');
+      return;
+    }
+
+    if (selectedOption?.dataset.requiresNote === 'true' && note.length < 3) {
+      showAdminCancelError('Vui lòng nhập mô tả cụ thể khi chọn "Lý do khác" (tối thiểu 3 ký tự).');
+      return;
+    }
+
+    const errorEl = document.getElementById('admin-order-cancel-error');
+    if (errorEl) {
+      errorEl.textContent = '';
+      errorEl.classList.add('hidden');
+    }
+
+    const btn = document.getElementById('admin-order-cancel-confirm');
+    const originalText = btn?.textContent || 'Xác nhận hủy';
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Đang hủy...';
+    }
+
+    try {
+      const res = await api.patch(`/orders/${order.id}/cancel`, {
+        reason: reasonCode,
+        note,
+        expectedStatus: order.status
+      });
+
+      if (res && res.success) {
+        toast.success(res.message || 'Đã hủy đơn hàng thành công.');
+        closeCancelOrderModal();
+        document.getElementById('admin-order-modal')?.classList.add('hidden');
+        await refreshOrdersData();
+      } else {
+        showAdminCancelError(res?.message || 'Không thể hủy đơn hàng.');
+      }
+    } catch (err) {
+      showAdminCancelError(err.message || 'Lỗi khi hủy đơn hàng.');
+      if (err.status === 409) {
+        await refreshOrdersData();
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = originalText;
+      }
+    }
+  });
+}
+
+function openCancelOrderModal(order) {
+  pendingCancelOrder = order;
+  const codeEl = document.getElementById('admin-order-cancel-code');
+  if (codeEl) codeEl.textContent = order.code;
+
+  const reasonSelect = document.getElementById('admin-order-cancel-reason');
+  if (reasonSelect) reasonSelect.value = '';
+  const noteInput = document.getElementById('admin-order-cancel-note');
+  if (noteInput) noteInput.value = '';
+
+  const errorEl = document.getElementById('admin-order-cancel-error');
+  if (errorEl) {
+    errorEl.textContent = '';
+    errorEl.classList.add('hidden');
+  }
+
+  document.getElementById('admin-order-cancel-modal')?.classList.remove('hidden');
+}
+
+function closeCancelOrderModal() {
+  pendingCancelOrder = null;
+  document.getElementById('admin-order-cancel-modal')?.classList.add('hidden');
 }
 
 async function refreshOrdersData() {
@@ -1311,6 +1531,8 @@ function renderAdminOrdersTable(orders) {
     tr.className = 'hover:bg-surface-container-low transition-colors';
 
     const itemsSummary = (order.items || []).map(i => `${escapeHtml(i.name)} x${i.quantity}`).join(', ');
+    const statusMeta = getOrderStatusMeta(order.status);
+    const cancellation = getOrderCancellation(order);
 
     tr.innerHTML = `
       <td class="p-4">
@@ -1344,31 +1566,34 @@ function renderAdminOrdersTable(orders) {
       </td>
 
       <td class="p-4">
-        <select class="admin-order-status-select h-8 px-2 rounded-lg text-xs font-bold border border-surface-container bg-surface-container-lowest focus:outline-none focus:border-primary-container cursor-pointer" data-order-id="${order.id}">
-          <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Chờ xác nhận</option>
-          <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Đã xác nhận</option>
-          <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Đang nấu món</option>
-          <option value="shipping" ${order.status === 'shipping' ? 'selected' : ''}>Đang giao hàng</option>
-          <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Hoàn tất</option>
-          <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Đã hủy</option>
-        </select>
+        <span class="inline-flex px-2.5 py-1 rounded-lg border text-[11px] font-bold ${statusMeta.cls}">
+          ${statusMeta.label}
+        </span>
+        ${cancellation ? `
+          <p class="text-[10px] font-bold text-rose-700 mt-1">Bởi ${escapeHtml(cancellation.actorLabel)}${cancellation.byName ? ` (${escapeHtml(cancellation.byName)})` : ''}</p>
+          <p class="text-[10px] text-secondary mt-0.5 max-w-[220px] whitespace-normal">
+            Lý do: ${escapeHtml(cancellation.reason || 'Không có thông tin')}
+          </p>
+          <p class="text-[10px] text-secondary mt-0.5">Lúc: ${formatDateAdmin(cancellation.at)}</p>
+        ` : ''}
       </td>
 
       <td class="p-4 text-right">
-        <button type="button" class="admin-view-order-btn px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold transition-all cursor-pointer">
-          Chi tiết
-        </button>
+        <div class="flex flex-wrap items-center justify-end gap-2">
+          ${buildOrderActionButtons(order)}
+          <button type="button" class="admin-view-order-btn px-3 py-1.5 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold transition-all cursor-pointer">
+            Chi tiết
+          </button>
+        </div>
       </td>
     `;
 
-    // Bind change status
-    const select = tr.querySelector('.admin-order-status-select');
-    select?.addEventListener('change', async (e) => {
-      const newStatus = e.target.value;
-      await updateOrderStatusAdmin(order.id, newStatus);
+    tr.querySelectorAll('.admin-order-action-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        requestOrderStatusAction(order, btn.dataset.status);
+      });
     });
 
-    // Bind view detail
     tr.querySelector('.admin-view-order-btn')?.addEventListener('click', () => {
       openAdminOrderDetailModal(order);
     });
@@ -1377,18 +1602,47 @@ function renderAdminOrdersTable(orders) {
   });
 }
 
-async function updateOrderStatusAdmin(orderId, status, note = '') {
+function requestOrderStatusAction(order, nextStatus) {
+  const transition = canTransitionOrderStatus(order.status, nextStatus);
+  if (!transition.allowed) {
+    toast.error(transition.message);
+    refreshOrdersData();
+    return;
+  }
+
+  if (nextStatus === 'cancelled') {
+    openCancelOrderModal(order);
+    return;
+  }
+
+  updateOrderStatusAdmin(order.id, nextStatus, '', order.status);
+}
+
+async function updateOrderStatusAdmin(orderId, status, note = '', expectedStatus = '') {
   try {
-    const res = await api.patch(`/orders/${orderId}/status`, { status, note });
+    const res = await api.patch(`/orders/${orderId}/status`, {
+      status,
+      note,
+      expectedStatus
+    });
     if (res && res.success) {
       toast.success(res.message || 'Cập nhật trạng thái thành công.');
       await refreshOrdersData();
-    } else {
-      toast.error(res?.message || 'Không thể cập nhật trạng thái đơn.');
+      return { success: true, conflict: false };
     }
+
+    toast.error(res?.message || 'Không thể cập nhật trạng thái đơn.');
+    return { success: false, conflict: false };
   } catch (err) {
     console.error('Lỗi cập nhật trạng thái đơn:', err);
     toast.error(err.message || 'Lỗi khi cập nhật trạng thái đơn.');
+
+    if (err.status === 409) {
+      await refreshOrdersData();
+      return { success: false, conflict: true };
+    }
+
+    return { success: false, conflict: false };
   }
 }
 
@@ -1400,7 +1654,9 @@ function openAdminOrderDetailModal(order) {
   if (codeEl) codeEl.textContent = order.code;
   if (!bodyEl) return;
 
-  const statusMeta = ORDER_STATUS_MAP[order.status] || { label: order.status, cls: 'bg-gray-100 text-gray-800' };
+  const statusMeta = getOrderStatusMeta(order.status);
+  const allowedNextStatuses = getAllowedNextStatuses(order.status);
+  const cancellation = getOrderCancellation(order);
 
   bodyEl.innerHTML = `
     <!-- Top summary -->
@@ -1415,29 +1671,25 @@ function openAdminOrderDetailModal(order) {
       </div>
     </div>
 
-    <!-- Quick Update Status Form inside modal -->
+    ${cancellation ? `
+      <div class="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-xs space-y-1.5">
+        <p class="font-black text-rose-800 flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[18px]">info</span>
+          Thông tin hủy đơn
+        </p>
+        <p class="text-rose-900"><span class="font-semibold">Người hủy:</span> ${escapeHtml(cancellation.actorLabel)}${cancellation.byName ? ` (${escapeHtml(cancellation.byName)})` : ''}${cancellation.byId ? ` - ID: ${escapeHtml(cancellation.byId)}` : ''}</p>
+        <p class="text-rose-900"><span class="font-semibold">Lý do:</span> ${escapeHtml(cancellation.reason || 'Không có thông tin')}</p>
+        ${cancellation.note ? `<p class="text-rose-900"><span class="font-semibold">Ghi chú:</span> ${escapeHtml(cancellation.note)}</p>` : ''}
+        <p class="text-rose-900"><span class="font-semibold">Thời gian hủy:</span> ${formatDateAdmin(cancellation.at)}</p>
+      </div>
+    ` : ''}
+
+    <!-- Valid Status Actions -->
     <div class="p-4 bg-surface-container-low rounded-2xl border border-surface-container space-y-3">
       <h4 class="text-xs font-bold text-on-surface uppercase tracking-wider">Cập nhật trạng thái đơn</h4>
-      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label class="block text-[11px] font-bold text-secondary mb-1">Chọn trạng thái mới:</label>
-          <select id="modal-update-status-select" class="w-full h-9 px-3 bg-surface-container-lowest border border-surface-container rounded-xl text-xs font-bold focus:outline-none focus:border-primary-container">
-            <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Chờ xác nhận</option>
-            <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Đã xác nhận</option>
-            <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Đang nấu món</option>
-            <option value="shipping" ${order.status === 'shipping' ? 'selected' : ''}>Đang giao hàng</option>
-            <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Hoàn tất</option>
-            <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Đã hủy</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-[11px] font-bold text-secondary mb-1">Ghi chú trạng thái (Tùy chọn):</label>
-          <input id="modal-update-status-note" type="text" placeholder="Ví dụ: Đang đợi shipper đến lấy..." class="w-full h-9 px-3 bg-surface-container-lowest border border-surface-container rounded-xl text-xs focus:outline-none focus:border-primary-container" />
-        </div>
-      </div>
-      <button id="modal-submit-status-btn" type="button" class="px-4 py-2 rounded-xl bg-primary hover:bg-primary-container text-white text-xs font-bold transition-all cursor-pointer">
-        Lưu cập nhật trạng thái
-      </button>
+      ${allowedNextStatuses.length > 0
+        ? `<div class="flex flex-wrap items-center gap-2">${buildOrderActionButtons(order, false)}</div>`
+        : `<p class="text-xs text-secondary italic">Đơn hàng đã ở trạng thái kết thúc, không thể thay đổi thêm.</p>`}
     </div>
 
     <!-- Customer & Delivery -->
@@ -1514,13 +1766,23 @@ function openAdminOrderDetailModal(order) {
     </div>
   `;
 
-  // Bind modal submit
-  document.getElementById('modal-submit-status-btn')?.addEventListener('click', async () => {
-    const sel = document.getElementById('modal-update-status-select');
-    const noteInput = document.getElementById('modal-update-status-note');
-    if (!sel) return;
-    await updateOrderStatusAdmin(order.id, sel.value, noteInput?.value.trim());
-    modal?.classList.add('hidden');
+  bodyEl.querySelectorAll('.admin-order-action-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const nextStatus = btn.dataset.status;
+
+      if (nextStatus === 'cancelled') {
+        openCancelOrderModal(order);
+        return;
+      }
+
+      btn.disabled = true;
+      const result = await updateOrderStatusAdmin(order.id, nextStatus, '', order.status);
+      btn.disabled = false;
+
+      if (result.success || result.conflict) {
+        modal?.classList.add('hidden');
+      }
+    });
   });
 
   modal?.classList.remove('hidden');

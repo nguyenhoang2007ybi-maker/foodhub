@@ -3,15 +3,19 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "scripts": {
-  "dev": "concurrently \"vite\" \"node server/index.js\"",
-  "dev:server": "concurrently \"vite\" \"json-server --watch data/foodhub.json --port 3000\"",
-    "server": "node server/index.js",
-    "seed": "node server/seed.js",
-    "test:api": "node test-api.js",
-    "build": "vite build",
-    "preview": "vite preview"
-  },
+ "scripts": {
+  "dev": "concurrently -k -n CLIENT,SERVER -c blue,green \"npm:dev:client\" \"npm:dev:server-only\"",
+  "dev:client": "vite",
+  "dev:server-only": "node server/index.js",
+  "dev:json": "concurrently -k -n CLIENT,JSON -c blue,yellow \"npm:dev:client\" \"npm:json-server\"",
+  "json-server": "json-server --watch data/foodhub.json --port 3000",
+  "server": "node server/index.js",
+  "seed": "node server/seed.js",
+  "test:api": "node test-api.js",
+  "test:cancel": "node test-cancel-orders.js",
+  "build": "vite build",
+  "preview": "vite preview"
+},
   "devDependencies": {
     "concurrently": "^10.0.5",
     "json-server": "^1.0.0-beta.15",
