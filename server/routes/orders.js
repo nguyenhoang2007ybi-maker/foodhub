@@ -85,6 +85,39 @@ function generateOrderCode() {
   return `FH${dateStr}-${randomStr}`;
 }
 
+// Bóc tách giá tiền từ chuỗi kiểu Việt Nam (ví dụ "75.000đ" -> 75000)
+function parsePriceNumber(value) {
+  if (typeof value === 'number' && Number.isFinite(value)) return value;
+  if (!value) return 0;
+  const digits = String(value).replace(/[^\d]/g, '');
+  return digits ? parseInt(digits, 10) : 0;
+}
+
+// Tìm món ăn trong thực đơn quán. Ưu tiên khớp theo id, sau đó theo tên,
+// cuối cùng theo chỉ mục. Điều này giúp hệ thống hoạt động cả khi dữ liệu
+// thực đơn không có trường id (tương thích ngược).
+function findMenuItem(menu, item) {
+  if (!Array.isArray(menu)) return null;
+
+  const itemId = item.dishId !== undefined ? item.dishId : item.id;
+  if (itemId !== undefined && itemId !== null && itemId !== '') {
+    const byId = menu.find(m => m.id !== undefined && String(m.id) === String(itemId));
+    if (byId) return byId;
+  }
+
+  if (item.name) {
+    const byName = menu.find(m => m.name === item.name);
+    if (byName) return byName;
+  }
+
+  const index = Number(itemId);
+  if (Number.isInteger(index) && index >= 0 && index < menu.length) {
+    return menu[index];
+  }
+
+  return null;
+}
+
 // 1. Khách hàng tạo đơn hàng mới
 // POST /api/orders
 router.post('/', authenticateToken, (req, res) => {
@@ -94,6 +127,8 @@ router.post('/', authenticateToken, (req, res) => {
       items,
       recipientName,
       recipientPhone,
+      contactEmail,
+      emailVerificationToken,
       deliveryAddress,
       note,
       paymentMethod = 'COD',
@@ -120,6 +155,22 @@ router.post('/', authenticateToken, (req, res) => {
     if (!deliveryAddress || deliveryAddress.trim().length < 5) {
       return res.status(400).json({ success: false, message: 'Địa chỉ giao hàng cần tối thiểu 5 ký tự.' });
     }
+
+    // Bắt buộc email hợp lệ và phải được xác nhận qua OTP trước khi đặt hàng
+    const cleanEmail = (contactEmail || '').trim().toLowerCase();
+    if (!cleanEmail || !EMAIL_REGEX.test(cleanEmail)) {
+      return res.status(400).json({ success: false, message: 'Vui lòng cung cấp địa chỉ email hợp lệ để nhận thông tin đơn hàng.' });
+    }
+
+    if (!emailVerificationToken) {
+      return res.status(400).json({ success: false, message: 'Email chưa được xác nhận. Vui lòng xác nhận email bằng mã OTP trước khi đặt hàng.' });
+    }
+
+    if (!isEmailVerified(cleanEmail, emailVerificationToken)) {
+      return res.status(400).json({ success: false, message: 'Mã xác nhận email không hợp lệ hoặc đã hết hạn. Vui lòng xác nhận lại email.' });
+    }
+
+    const finalPaymentMethod = VALID_PAYMENT_METHODS.includes(paymentMethod) ? paymentMethod : 'COD';
 
     const db = getDb();
     const restId = Number(restaurantId);
@@ -223,6 +274,7 @@ router.post('/', authenticateToken, (req, res) => {
       const itemTotal = unitPrice * quantity;
       subtotal += itemTotal;
 
+      const menuIndex = (restaurant.menu || []).indexOf(dishInMenu);
       verifiedItems.push({
         dishId: dishInMenu.id,
         restaurantId: restaurant.id,
@@ -276,6 +328,9 @@ router.post('/', authenticateToken, (req, res) => {
       restaurantImage: restaurant.image,
       recipientName: recipientName.trim(),
       recipientPhone: cleanPhone,
+      contactEmail: cleanEmail,
+      emailVerified: true,
+      emailVerifiedAt: new Date().toISOString(),
       deliveryAddress: deliveryAddress.trim(),
       note: note ? note.trim() : '',
       items: verifiedItems,
@@ -285,7 +340,7 @@ router.post('/', authenticateToken, (req, res) => {
       discount,
       couponCode: appliedCoupon,
       total,
-      paymentMethod: paymentMethod === 'COD' ? 'COD' : 'COD',
+      paymentMethod: finalPaymentMethod,
       paymentStatus: 'unpaid',
       status: 'pending', // pending -> confirmed -> preparing -> shipping -> completed / cancelled
       timeline: [
@@ -303,6 +358,9 @@ router.post('/', authenticateToken, (req, res) => {
       db.orders = [];
     }
     db.orders.unshift(newOrder);
+
+    // Token xác nhận email chỉ được dùng một lần cho một đơn hàng
+    consumeEmailVerification(cleanEmail);
 
     // Xóa giỏ hàng của user sau khi đặt hàng thành công
     const userCart = db.carts.find(c => c.userId === req.user.id);

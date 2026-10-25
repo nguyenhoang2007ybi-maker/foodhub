@@ -1,7 +1,7 @@
 // FoodHub Cart & Checkout & Order History Controller
 import { api } from './api.js';
 import { toast } from './toast.js';
-import { initHeader, initFooter, getUser, isLoggedIn } from './auth.js';
+import { initHeader, initFooter, isLoggedIn } from './auth.js';
 import {
   getCart,
   saveCart,
@@ -10,6 +10,7 @@ import {
   clearCart,
   getCartCount,
   getCartSubtotal,
+  calculateOrderSummary,
   formatVND,
   updateCartBadge,
   validateCartAgainstRestaurant
@@ -20,8 +21,7 @@ import {
   getOrderCancellation
 } from '../shared/orderCancellation.js';
 
-let appliedCoupon = null;
-let isSubmitting = false;
+let appliedCoupon = getAppliedCoupon();
 let pendingCancelOrderId = null;
 let pendingCancelOrderStatus = null;
 const invalidCartItems = new Map();
@@ -70,8 +70,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
   setupTabs();
   setupCartView();
-  setupCheckoutForm();
+  setupItemDeleteModal();
   setupModals();
+
+  // Nếu người dùng đã áp dụng ưu đãi trước đó (ví dụ quay lại từ trang thanh toán)
+  if (appliedCoupon) {
+    const badge = document.getElementById('applied-coupon-badge');
+    const badgeText = document.getElementById('applied-coupon-text');
+    const couponInput = document.getElementById('coupon-input');
+    if (couponInput) couponInput.value = appliedCoupon.code;
+    if (badge && badgeText) {
+      badgeText.textContent = `Đã áp dụng mã: ${appliedCoupon.code} (${appliedCoupon.description})`;
+      badge.classList.remove('hidden');
+    }
+  }
 
   // Kiểm tra tab từ URL (#orders hoặc ?tab=orders)
   const urlParams = new URLSearchParams(window.location.search);
@@ -146,8 +158,26 @@ function setupCartView() {
     invalidCartItems.clear();
     document.getElementById('clear-cart-modal')?.classList.add('hidden');
     appliedCoupon = null;
+    clearAppliedCoupon();
     toast.info('Đã làm trống giỏ hàng.');
     renderCart();
+  });
+
+  // Nút chuyển sang trang thanh toán riêng
+  document.getElementById('proceed-to-checkout-btn')?.addEventListener('click', () => {
+    const cart = getCart();
+    if (!cart.items || cart.items.length === 0) {
+      toast.warning('Giỏ hàng của bạn đang trống.');
+      return;
+    }
+    if (!isLoggedIn()) {
+      toast.warning('Vui lòng đăng nhập để tiến hành thanh toán.');
+      setTimeout(() => {
+        window.location.href = `/login.html?returnUrl=${encodeURIComponent('/checkout.html')}`;
+      }, 800);
+      return;
+    }
+    window.location.href = '/checkout.html';
   });
 
   // Coupon handling
@@ -162,6 +192,7 @@ function setupCartView() {
 
   removeCouponBtn?.addEventListener('click', () => {
     appliedCoupon = null;
+    clearAppliedCoupon();
     if (couponInput) couponInput.value = '';
     document.getElementById('applied-coupon-badge')?.classList.add('hidden');
     toast.info('Đã gỡ mã ưu đãi.');
@@ -176,6 +207,53 @@ function setupCartView() {
       applyCouponCode(code);
     });
   });
+}
+
+// Thiết lập Modal xác nhận xóa 1 món
+function setupItemDeleteModal() {
+  const modal = document.getElementById('delete-item-modal');
+  const cancelBtn = document.getElementById('cancel-delete-item-btn');
+  const confirmBtn = document.getElementById('confirm-delete-item-btn');
+
+  cancelBtn?.addEventListener('click', () => {
+    modal?.classList.add('hidden');
+    pendingDeleteItem = null;
+  });
+
+  confirmBtn?.addEventListener('click', () => {
+    if (pendingDeleteItem) {
+      removeItem(pendingDeleteItem.dishId);
+      toast.info(`Đã xóa "${pendingDeleteItem.name}" khỏi giỏ hàng.`);
+      pendingDeleteItem = null;
+      renderCart();
+    }
+    modal?.classList.add('hidden');
+  });
+
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.add('hidden');
+      pendingDeleteItem = null;
+    }
+  });
+}
+
+function confirmDeleteItem(item) {
+  pendingDeleteItem = item;
+  const modal = document.getElementById('delete-item-modal');
+  const nameEl = document.getElementById('delete-item-name');
+  if (nameEl) nameEl.textContent = `"${item.name}"`;
+
+  if (modal) {
+    modal.classList.remove('hidden');
+  } else {
+    // Fallback phòng khi modal HTML chưa sẵn sàng
+    if (window.confirm(`Bạn có chắc chắn muốn xóa món "${item.name}" khỏi giỏ hàng không?`)) {
+      removeItem(item.dishId);
+      toast.info(`Đã xóa "${item.name}" khỏi giỏ hàng.`);
+      renderCart();
+    }
+  }
 }
 
 function applyCouponCode(code) {
@@ -197,6 +275,7 @@ function applyCouponCode(code) {
   }
 
   appliedCoupon = coupon;
+  setAppliedCoupon(coupon);
   const badge = document.getElementById('applied-coupon-badge');
   const badgeText = document.getElementById('applied-coupon-text');
   if (badge && badgeText) {
@@ -423,6 +502,7 @@ function renderCart() {
       
       const priceUnit = item.priceNum || (parseInt(String(item.price || '').replace(/[^\d]/g, ''), 10) || 0);
       const itemTotal = priceUnit * item.quantity;
+      const fallbackImg = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80';
 
       itemEl.innerHTML = `
         <div class="flex items-center gap-3 min-w-0">
@@ -462,8 +542,14 @@ function renderCart() {
           </div>
 
           <!-- Remove Button -->
-          <button type="button" class="item-remove-btn p-1.5 rounded-lg text-secondary hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer" data-dish-id="${item.dishId}" title="Xóa món">
+          <button
+            type="button"
+            class="item-remove-btn p-1.5 sm:px-2 sm:py-1.5 rounded-xl text-secondary hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-200 transition-colors cursor-pointer flex items-center gap-1"
+            data-dish-id="${item.dishId}"
+            title="Xóa món khỏi giỏ hàng"
+          >
             <span class="material-symbols-outlined text-[18px]">delete</span>
+            <span class="text-xs font-semibold sm:hidden">Xóa</span>
           </button>
         </div>
       `;
@@ -477,41 +563,24 @@ function renderCart() {
 
 function renderSummary() {
   const subtotal = getCartSubtotal();
-  const freeshipThreshold = 200000;
-  let shippingFee = subtotal >= freeshipThreshold ? 0 : 15000;
+  const { shippingFee, discount, total } = calculateOrderSummary(subtotal, appliedCoupon);
 
   // Freeship Progress Bar
   const freeshipText = document.getElementById('freeship-progress-text');
   const freeshipStatus = document.getElementById('freeship-status-tag');
   const freeshipBar = document.getElementById('freeship-progress-bar');
 
-  if (subtotal >= freeshipThreshold) {
+  if (subtotal >= FREESHIP_THRESHOLD) {
     if (freeshipText) freeshipText.textContent = '🎉 Đơn hàng đã đủ điều kiện Miễn phí giao hàng!';
     if (freeshipStatus) freeshipStatus.textContent = '0đ (Free)';
     if (freeshipBar) freeshipBar.style.width = '100%';
   } else {
-    const remain = freeshipThreshold - subtotal;
-    const percent = Math.min(100, Math.round((subtotal / freeshipThreshold) * 100));
+    const remain = FREESHIP_THRESHOLD - subtotal;
+    const percent = Math.min(100, Math.round((subtotal / FREESHIP_THRESHOLD) * 100));
     if (freeshipText) freeshipText.textContent = `Thêm ${formatVND(remain)} để được Freeship 15k!`;
     if (freeshipStatus) freeshipStatus.textContent = '15k';
     if (freeshipBar) freeshipBar.style.width = `${percent}%`;
   }
-
-  // Calculate discount
-  let discount = 0;
-  if (appliedCoupon) {
-    if (appliedCoupon.type === 'percent') {
-      discount = Math.min(appliedCoupon.max || 50000, Math.round((subtotal * appliedCoupon.value) / 100));
-    } else if (appliedCoupon.type === 'freeship') {
-      discount = shippingFee;
-    } else if (appliedCoupon.type === 'fixed') {
-      if (subtotal >= (appliedCoupon.minOrder || 0)) {
-        discount = appliedCoupon.value;
-      }
-    }
-  }
-
-  const total = Math.max(0, subtotal + shippingFee - discount);
 
   // Render price numbers
   const subtotalEl = document.getElementById('price-subtotal');
@@ -985,4 +1054,3 @@ function formatDateTime(iso) {
   const two = n => String(n).padStart(2, '0');
   return `${two(d.getDate())}/${two(d.getMonth() + 1)}/${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`;
 }
-

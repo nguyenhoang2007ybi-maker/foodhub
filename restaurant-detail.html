@@ -34,7 +34,7 @@
 <body class="bg-surface font-sans text-on-surface antialiased min-h-screen flex flex-col">
   <header></header>
 
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 pb-24">
     <!-- Breadcrumb -->
     <div class="flex items-center gap-2 text-xs text-secondary mb-4">
       <a href="/index.html" class="hover:text-primary transition-colors">Trang chủ</a>
@@ -176,7 +176,7 @@
             <span class="material-symbols-outlined text-primary text-[24px]">restaurant_menu</span>
             <h2 class="text-xl font-bold text-on-surface">Thực đơn & Giá tham khảo</h2>
           </div>
-          <span class="text-xs text-secondary font-medium">Cập nhật bởi FoodHub</span>
+          <span class="text-xs text-secondary font-medium">Nhấn "Thêm vào giỏ" để đặt món trực tuyến</span>
         </div>
         <div id="rest-menu-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
           <!-- Populated by JS -->
@@ -293,9 +293,32 @@
     </div>
   </div>
 
+  <!-- FLOATING QUICK CART BAR (Appears when cart has items) -->
+  <aside id="floating-cart-bar" class="hidden fixed bottom-6 left-1/2 -translate-x-1/2 z-40 max-w-lg w-[calc(100%-2rem)] bg-on-surface text-surface rounded-2xl shadow-2xl p-3 sm:px-5 sm:py-3.5 border border-white/10 flex items-center justify-between gap-3 animate-in fade-in slide-in-from-bottom-5">
+    <div class="flex items-center gap-3 min-w-0">
+      <div class="w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center flex-shrink-0 shadow-sm">
+        <span class="material-symbols-outlined text-[20px]">shopping_bag</span>
+      </div>
+      <div class="min-w-0">
+        <p class="text-xs font-bold text-white truncate flex items-center gap-2">
+          <span id="floating-cart-count">0 món</span>
+          <span class="text-white/40">•</span>
+          <span id="floating-cart-total" class="text-primary-container font-black">0 đ</span>
+        </p>
+        <p id="floating-cart-rest" class="text-[11px] text-white/70 truncate">Quán ăn</p>
+      </div>
+    </div>
+    <a
+      href="/cart.html"
+      class="h-9 sm:h-10 px-4 sm:px-5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs flex items-center gap-1.5 shadow-md hover:shadow-lg transition-all flex-shrink-0 cursor-pointer"
+    >
+      <span>Xem giỏ hàng</span>
+      <span class="material-symbols-outlined text-[16px]">arrow_forward</span>
+    </a>
+  </aside>
+
   <footer></footer>
 
   <script type="module" src="/src/restaurantDetail.js"></script>
 </body>
 </html>
-

@@ -3,7 +3,7 @@ import { api } from './api.js';
 import { toast } from './toast.js';
 import { initHeader, initFooter, getUser, isLoggedIn, updateFavoritesBadge } from './auth.js';
 import { createRestaurantCard } from './components/restaurantCard.js';
-import { addToCart, replaceCartWithDish, formatVND } from './cart.js';
+import { addToCart, replaceCartWithDish, formatVND, getCart, getCartCount, getCartSubtotal } from './cart.js';
 
 let currentRestaurant = null;
 let selectedStar = 5;
@@ -419,6 +419,29 @@ function renderGoogleMaps(restaurant) {
   }
 }
 
+
+function updateFloatingCartBar() {
+  const bar = document.getElementById('floating-cart-bar');
+  if (!bar) return;
+  const cart = getCart();
+  const count = getCartCount();
+  const subtotal = getCartSubtotal();
+
+  if (count > 0 && cart.items && cart.items.length > 0) {
+    const countEl = document.getElementById('floating-cart-count');
+    const totalEl = document.getElementById('floating-cart-total');
+    const restEl = document.getElementById('floating-cart-rest');
+
+    if (countEl) countEl.textContent = `${count} món`;
+    if (totalEl) totalEl.textContent = formatVND(subtotal);
+    if (restEl) restEl.textContent = cart.restaurantName || (currentRestaurant && currentRestaurant.name) || 'Quán ăn';
+
+    bar.classList.remove('hidden');
+  } else {
+    bar.classList.add('hidden');
+  }
+}
+
 let pendingConflictItem = null;
 
 function setupCartConflictModal() {
@@ -462,13 +485,20 @@ function renderMenu(menuItems) {
   }
 
   container.innerHTML = '';
-  menuItems.forEach(item => {
+  menuItems.forEach((item, index) => {
+    // Chuẩn hóa món ăn: bảo đảm mỗi món luôn có id ổn định và ảnh hợp lệ để thao tác giỏ hàng.
+    const dishImage = item.image || (currentRestaurant && currentRestaurant.image) || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80';
+    const dish = {
+      ...item,
+      id: (item.id !== undefined && item.id !== null) ? item.id : index,
+      image: dishImage
+    };
     const el = document.createElement('div');
     const isOutOfStock = item.isAvailable === false;
     el.className = 'flex items-center gap-3 p-3.5 rounded-2xl bg-surface-container-low border border-surface-container-high hover:border-primary-container/40 hover:shadow-sm transition-all group';
     el.innerHTML = `
       <div class="w-16 h-16 rounded-xl overflow-hidden bg-surface-container-high flex-shrink-0 relative">
-        <img src="${item.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80'}" alt="${item.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" />
+        <img src="${dishImage}" alt="${item.name}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" loading="lazy" onerror="this.src='https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=200&q=80'" />
         ${isOutOfStock ? `<div class="absolute inset-0 bg-black/60 flex items-center justify-center text-[10px] font-bold text-white uppercase tracking-wider">Hết</div>` : ''}
       </div>
       <div class="flex-1 min-w-0">
@@ -480,9 +510,10 @@ function renderMenu(menuItems) {
         ${isOutOfStock ? `
           <span class="px-2.5 py-1 text-[11px] font-semibold text-secondary/60 bg-surface-container-high rounded-lg cursor-not-allowed">Hết hàng</span>
         ` : `
-          <button type="button" class="add-to-cart-btn h-8 px-3 rounded-lg bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold flex items-center gap-1 transition-all cursor-pointer shadow-sm active:scale-95" data-dish-id="${item.id}">
-            <span class="material-symbols-outlined text-[16px]">add_shopping_cart</span>
-            <span class="hidden sm:inline">Thêm</span>
+          <button type="button" class="add-to-cart-btn h-9 px-3 sm:px-3.5 rounded-xl bg-primary/10 hover:bg-primary text-primary hover:text-white text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95" data-dish-id="${dish.id}" title="Thêm vào giỏ hàng">
+            <span class="material-symbols-outlined text-[17px]">add_shopping_cart</span>
+            <span class="hidden sm:inline">Thêm vào giỏ</span>
+            <span class="sm:hidden">Thêm</span>
           </button>
         `}
       </div>
@@ -490,11 +521,12 @@ function renderMenu(menuItems) {
 
     const addBtn = el.querySelector('.add-to-cart-btn');
     if (addBtn) {
-      addBtn.addEventListener('click', () => {
+      addBtn.addEventListener('click', (e) => {
+        e.preventDefault();
         if (!currentRestaurant) return;
-        const res = addToCart(item, currentRestaurant, 1);
+        const res = addToCart(dish, currentRestaurant, 1);
         if (res.conflict) {
-          pendingConflictItem = item;
+          pendingConflictItem = dish;
           const curRestEl = document.getElementById('conflict-current-restaurant');
           const newRestEl = document.getElementById('conflict-new-restaurant');
           if (curRestEl) curRestEl.textContent = res.currentRestaurant.name;
@@ -504,7 +536,8 @@ function renderMenu(menuItems) {
         } else if (!res.success) {
           toast.error(res.message || 'Không thể thêm món vào giỏ hàng.');
         } else {
-          toast.success(`Đã thêm "${item.name}" vào giỏ hàng!`);
+          toast.success(`Đã thêm "${dish.name}" vào giỏ hàng!`);
+          updateFloatingCartBar();
         }
       });
     }

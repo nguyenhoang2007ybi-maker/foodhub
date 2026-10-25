@@ -25,6 +25,7 @@ const initialSchema = {
   favorites: [],
   orders: [],
   carts: [],
+  emailVerifications: {},
   settings: {
     siteName: 'FoodHub',
     slogan: 'Khám phá quán ăn ngon quanh bạn',

@@ -210,11 +210,85 @@ export function getCartKey() {
   return user ? `foodhub_cart_user_${user.id}` : 'foodhub_cart_guest';
 }
 
+// Lưu / đọc mã ưu đãi đang áp dụng để dùng chung giữa trang giỏ hàng và thanh toán
+function getCouponStorageKey() {
+  return `${getCartKey()}_coupon`;
+}
+
+export function getAppliedCoupon() {
+  try {
+    const raw = localStorage.getItem(getCouponStorageKey());
+    if (!raw) return null;
+    const code = JSON.parse(raw);
+    return COUPONS[code] || null;
+  } catch (e) {
+    return null;
+  }
+}
+
+export function setAppliedCoupon(coupon) {
+  try {
+    if (!coupon) {
+      localStorage.removeItem(getCouponStorageKey());
+      return;
+    }
+    localStorage.setItem(getCouponStorageKey(), JSON.stringify(coupon.code));
+  } catch (e) {
+    console.warn('Không thể lưu mã ưu đãi:', e);
+  }
+}
+
+export function clearAppliedCoupon() {
+  try {
+    localStorage.removeItem(getCouponStorageKey());
+  } catch (e) {
+    // ignore
+  }
+}
+
 // Lấy dữ liệu giỏ hàng hiện tại
 export function getCart() {
   try {
     const key = getCartKey();
-    const raw = localStorage.getItem(key);
+    let raw = localStorage.getItem(key);
+
+    // Nếu người dùng đã đăng nhập nhưng giỏ cá nhân rỗng, kiểm tra xem có giỏ hàng guest trước đó để chuyển giao (migrate) sang không
+    const user = getUser();
+    if (user) {
+      let isUserCartEmpty = true;
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed?.items) && parsed.items.length > 0) {
+            isUserCartEmpty = false;
+          }
+        } catch (e) {
+          isUserCartEmpty = true;
+        }
+      }
+
+      if (isUserCartEmpty) {
+        const guestRaw = localStorage.getItem('foodhub_cart_guest');
+        if (guestRaw) {
+          try {
+            const guestCart = JSON.parse(guestRaw);
+            if (Array.isArray(guestCart.items) && guestCart.items.length > 0) {
+              localStorage.setItem(key, guestRaw);
+              localStorage.removeItem('foodhub_cart_guest');
+              const guestCoupon = localStorage.getItem('foodhub_cart_guest_coupon');
+              if (guestCoupon) {
+                localStorage.setItem(`${key}_coupon`, guestCoupon);
+                localStorage.removeItem('foodhub_cart_guest_coupon');
+              }
+              raw = guestRaw;
+            }
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
+    }
+
     if (!raw) {
       return {
         restaurantId: null,
@@ -367,6 +441,7 @@ export function addToCart(dish, restaurant, quantity = 1, note = '') {
     existingItem.image = menuItem.image || '';
     existingItem.quantity = Math.min(MAX_QUANTITY, resolveQuantity(existingItem.quantity) + addQuantity);
     if (note) existingItem.note = note;
+    if (!existingItem.image && fallbackImage) existingItem.image = fallbackImage;
   } else {
     cart.items.push({
       dishId,
@@ -444,8 +519,7 @@ export function replaceCartWithDish(dish, restaurant, quantity = 1, note = '') {
 // Cập nhật số lượng món
 export function updateQuantity(dishId, delta) {
   const cart = getCart();
-  const idNum = Number(dishId);
-  const itemIndex = cart.items.findIndex(i => Number(i.dishId) === idNum);
+  const itemIndex = cart.items.findIndex(i => String(i.dishId) === String(dishId));
 
   if (itemIndex === -1) return cart;
 
@@ -464,8 +538,7 @@ export function updateQuantity(dishId, delta) {
 // Xóa 1 món khỏi giỏ
 export function removeItem(dishId) {
   const cart = getCart();
-  const idNum = Number(dishId);
-  cart.items = cart.items.filter(i => Number(i.dishId) !== idNum);
+  cart.items = cart.items.filter(i => String(i.dishId) !== String(dishId));
 
   if (cart.items.length === 0) {
     cart.restaurantId = null;
@@ -514,6 +587,28 @@ export function getCartSubtotal() {
   }, 0);
 }
 
+// Tính toán tổng kết đơn hàng dùng chung cho trang giỏ hàng và trang thanh toán.
+// Quy tắc giống backend: freeship cho đơn từ 200.000đ, phí ship 15.000đ.
+export function calculateOrderSummary(subtotal, coupon = null) {
+  const shippingFee = subtotal >= FREESHIP_THRESHOLD ? 0 : SHIPPING_FEE;
+  let discount = 0;
+
+  if (coupon) {
+    if (coupon.type === 'percent') {
+      discount = Math.min(coupon.max || 50000, Math.round((subtotal * coupon.value) / 100));
+    } else if (coupon.type === 'freeship') {
+      discount = shippingFee;
+    } else if (coupon.type === 'fixed') {
+      if (subtotal >= (coupon.minOrder || 0)) {
+        discount = coupon.value;
+      }
+    }
+  }
+
+  const total = Math.max(0, subtotal + shippingFee - discount);
+  return { subtotal, shippingFee, discount, total };
+}
+
 // Định dạng tiền tệ VND đẹp.
 // Nhận cả số và chuỗi giá kiểu Việt Nam ("75.000đ", "10.000đ/cặp").
 // Dấu chấm là phân cách hàng nghìn nên phải loại bỏ trước khi parse.
@@ -532,7 +627,7 @@ export function formatVND(amount) {
 // Cập nhật số lượng trên các badge giỏ hàng
 export function updateCartBadge() {
   const count = getCartCount();
-  const badges = document.querySelectorAll('.header-cart-badge, #header-cart-count, #mobile-cart-count');
+  const badges = document.querySelectorAll('.header-cart-badge, #header-cart-count, #mobile-cart-count, #tab-cart-badge');
   badges.forEach(badge => {
     badge.textContent = count;
     if (count > 0) {

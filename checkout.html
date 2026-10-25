@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FoodHub - Thanh Toán & Xác Nhận Email</title>
+  <meta name="description" content="Nhập thông tin giao hàng, xác nhận email và hoàn tất đặt món tại FoodHub." />
+
+  <!-- Google Fonts & Material Symbols -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+
+  <!-- Tailwind CSS CDN & FoodHub Unified Design Tokens -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#ab3500",
+            "primary-container": "#ff6b35",
+            "on-primary": "#ffffff",
+            surface: "#f9f9ff",
+            "on-surface": "#151c27",
+            "on-surface-variant": "#594139",
+            secondary: "#5f5e5e",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f0f3ff",
+            "surface-container": "#e7eefe",
+            "surface-container-high": "#e2e8f8"
+          },
+          fontFamily: { sans: ["Inter", "sans-serif"] }
+        }
+      }
+    };
+  </script>
+
+  <style>
+    #user-menu-btn img {
+      width: 32px !important;
+      height: 32px !important;
+      max-width: 32px !important;
+      max-height: 32px !important;
+      border-radius: 9999px !important;
+      object-fit: cover !important;
+    }
+    html { scroll-behavior: smooth; }
+  </style>
+</head>
+<body class="bg-surface font-sans text-on-surface antialiased min-h-screen flex flex-col">
+
+  <!-- Header -->
+  <header></header>
+
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10">
+
+    <!-- Step / Breadcrumb -->
+    <div class="flex items-center justify-between gap-4 mb-8 flex-wrap">
+      <div>
+        <h1 class="text-2xl font-black text-on-surface flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[28px]">shopping_cart_checkout</span>
+          <span>Thanh toán đơn hàng</span>
+        </h1>
+        <p class="text-xs text-secondary mt-1">Hoàn tất thông tin giao hàng và xác nhận email để đặt món.</p>
+      </div>
+
+      <div class="flex items-center gap-2 text-xs font-semibold">
+        <a href="/cart.html" class="flex items-center gap-1.5 text-secondary hover:text-primary transition-colors">
+          <span class="material-symbols-outlined text-[16px]">shopping_bag</span>
+          <span>Giỏ hàng</span>
+        </a>
+        <span class="material-symbols-outlined text-secondary text-[16px]">chevron_right</span>
+        <span class="flex items-center gap-1.5 text-primary">
+          <span class="material-symbols-outlined text-[16px]">payments</span>
+          <span>Thanh toán</span>
+        </span>
+      </div>
+    </div>
+
+    <!-- Empty / Auth guard states -->
+    <div id="checkout-blocked-state" class="hidden py-16 px-4 text-center max-w-md mx-auto">
+      <div class="w-24 h-24 rounded-3xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-6">
+        <span class="material-symbols-outlined text-5xl" id="blocked-icon">shopping_cart</span>
+      </div>
+      <h2 class="text-xl font-bold text-on-surface mb-2" id="blocked-title">Giỏ hàng của bạn đang trống</h2>
+      <p class="text-xs sm:text-sm text-secondary leading-relaxed mb-6" id="blocked-desc">
+        Hãy thêm món ăn vào giỏ trước khi tiến hành thanh toán.
+      </p>
+      <a href="/explore.html" id="blocked-action" class="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-md hover:bg-primary-container transition-all">
+        <span class="material-symbols-outlined text-[18px]">restaurant_menu</span>
+        <span>Tiếp tục mua sắm</span>
+      </a>
+    </div>
+
+    <!-- CHECKOUT CONTENT -->
+    <div id="checkout-content" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+      <!-- LEFT: FORM -->
+      <form id="checkout-form" class="lg:col-span-7 space-y-6" novalidate>
+
+        <!-- SECTION 1: RECIPIENT -->
+        <section class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+          <div class="flex items-center gap-2 pb-3 border-b border-surface-container-high">
+            <span class="material-symbols-outlined text-primary text-[22px]">person</span>
+            <h2 class="text-base font-bold text-on-surface">Thông tin người nhận</h2>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label for="co-name" class="block text-xs font-bold text-on-surface mb-1">Họ và tên người nhận <span class="text-rose-500">*</span></label>
+              <input id="co-name" type="text" required minlength="2" placeholder="Nguyễn Văn A"
+                class="w-full h-11 px-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary-container" />
+            </div>
+            <div>
+              <label for="co-phone" class="block text-xs font-bold text-on-surface mb-1">Số điện thoại <span class="text-rose-500">*</span></label>
+              <input id="co-phone" type="tel" required pattern="^(0|\+84)[3|5|7|8|9][0-9]{8}$" placeholder="0912345678"
+                class="w-full h-11 px-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary-container" />
+              <p class="text-[10px] text-secondary mt-1">Tài xế sẽ liên hệ số này để giao hàng.</p>
+            </div>
+          </div>
+
+          <!-- EMAIL VERIFICATION -->
+          <div class="pt-1">
+            <label for="co-email" class="block text-xs font-bold text-on-surface mb-1">
+              Email người đặt hàng <span class="text-rose-500">*</span>
+              <span id="email-verified-badge" class="hidden ml-1 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold align-middle">
+                <span class="material-symbols-outlined text-[12px]">verified</span> Đã xác nhận
+              </span>
+            </label>
+
+            <div class="flex flex-col sm:flex-row gap-2">
+              <div class="relative flex-1">
+                <span class="material-symbols-outlined absolute left-3 top-3 text-secondary text-[20px]">mail</span>
+                <input id="co-email" type="email" required placeholder="email@example.com"
+                  class="w-full h-11 pl-10 pr-3 bg-surface-container-low border border-surface-container-high rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary-container disabled:opacity-70" />
+              </div>
+              <button id="send-otp-btn" type="button"
+                class="h-11 px-5 rounded-xl bg-primary text-white text-sm font-bold shadow-sm hover:bg-primary-container transition-colors cursor-pointer whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed">
+                Gửi mã xác nhận
+              </button>
+            </div>
+
+            <p id="email-verify-hint" class="text-[11px] text-secondary mt-1.5">
+              Chúng tôi sẽ gửi mã OTP gồm 6 chữ số tới email này. Bạn phải xác nhận email mới có thể đặt hàng.
+            </p>
+
+            <!-- Dev / SMTP notice -->
+            <div id="otp-dev-notice" class="hidden mt-2 p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-start gap-2">
+              <span class="material-symbols-outlined text-[16px] text-amber-600 flex-shrink-0">build</span>
+              <span id="otp-dev-notice-text"></span>
+            </div>
+
+            <!-- OTP PANEL -->
+            <div id="otp-panel" class="hidden mt-3 p-3.5 rounded-2xl bg-surface-container-low border border-surface-container-high space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="text-xs font-bold text-on-surface">Nhập mã xác nhận (6 chữ số)</span>
+                <span id="otp-countdown" class="text-[11px] font-semibold text-secondary"></span>
+              </div>
+              <div class="flex flex-col sm:flex-row gap-2">
+                <input id="co-otp" type="text" inputmode="numeric" maxlength="6" placeholder="••••••"
+                  class="flex-1 h-11 px-3.5 bg-surface-container-lowest border border-surface-container-high rounded-xl text-center text-lg font-black tracking-[0.5em] text-on-surface focus:outline-none focus:border-primary-container" />
+                <button id="verify-otp-btn" type="button"
+                  class="h-11 px-5 rounded-xl bg-emerald-600 text-white text-sm font-bold shadow-sm hover:bg-emerald-700 transition-colors cursor-pointer whitespace-nowrap disabled:opacity-60 disabled:cursor-not-allowed">
+                  Xác nhận mã
+                </button>
+              </div>
+              <button id="resend-otp-btn" type="button" class="text-[11px] font-semibold text-primary hover:underline disabled:text-secondary disabled:no-underline disabled:cursor-not-allowed">
+                Chưa nhận được mã? Gửi lại
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 2: DELIVERY ADDRESS -->
+        <section class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+          <div class="flex items-center gap-2 pb-3 border-b border-surface-container-high">
+            <span class="material-symbols-outlined text-primary text-[22px]">local_shipping</span>
+            <h2 class="text-base font-bold text-on-surface">Địa chỉ giao hàng</h2>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label for="co-province" class="block text-xs font-bold text-on-surface mb-1">Tỉnh / Thành phố <span class="text-rose-500">*</span></label>
+              <input id="co-province" list="province-list" type="text" required placeholder="Ví dụ: Hà Nội"
+                class="w-full h-11 px-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary-container" />
+            </div>
+            <div>
+              <label for="co-district" class="block text-xs font-bold text-on-surface mb-1">Quận / Huyện <span class="text-rose-500">*</span></label>
+              <input id="co-district" type="text" required placeholder="Ví dụ: Hoàn Kiếm"
+                class="w-full h-11 px-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary-container" />
+            </div>
+            <div>
+              <label for="co-ward" class="block text-xs font-bold text-on-surface mb-1">Phường / Xã <span class="text-rose-500">*</span></label>
+              <input id="co-ward" type="text" required placeholder="Ví dụ: Hàng Bồ"
+                class="w-full h-11 px-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary-container" />
+            </div>
+          </div>
+
+          <div>
+            <label for="co-street" class="block text-xs font-bold text-on-surface mb-1">Số nhà, tên đường, ngõ hoặc ngách <span class="text-rose-500">*</span></label>
+            <input id="co-street" type="text" required minlength="2" placeholder="Ví dụ: Số 12, ngõ 34 phố Tràng Thi"
+              class="w-full h-11 px-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary-container" />
+          </div>
+
+          <div>
+            <label for="co-extra" class="block text-xs font-bold text-on-surface mb-1">Địa chỉ bổ sung <span class="text-secondary font-normal">(Không bắt buộc)</span></label>
+            <input id="co-extra" type="text" placeholder="Ví dụ: Tầng 5, tòa A, gần cây xăng..."
+              class="w-full h-11 px-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary-container" />
+          </div>
+
+          <div class="p-3 rounded-xl bg-surface-container-low border border-surface-container-high flex items-start gap-2 text-xs">
+            <span class="material-symbols-outlined text-primary text-[18px] flex-shrink-0">place</span>
+            <div>
+              <span class="text-secondary">Địa chỉ giao hàng đầy đủ:</span>
+              <p id="address-preview" class="font-semibold text-on-surface mt-0.5">Vui lòng điền địa chỉ ở trên</p>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION 3: PAYMENT METHOD -->
+        <section class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+          <div class="flex items-center gap-2 pb-3 border-b border-surface-container-high">
+            <span class="material-symbols-outlined text-primary text-[22px]">account_balance_wallet</span>
+            <h2 class="text-base font-bold text-on-surface">Phương thức thanh toán</h2>
+          </div>
+
+          <div class="space-y-3">
+            <label class="payment-option flex items-start gap-3 p-3.5 rounded-2xl border-2 border-primary bg-primary/5 cursor-pointer transition-all">
+              <input type="radio" name="paymentMethod" value="COD" class="mt-1 accent-[#ab3500]" checked />
+              <div class="flex-1">
+                <p class="text-sm font-bold text-on-surface flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-primary text-[18px]">payments</span>
+                  Thanh toán tiền mặt khi nhận hàng (COD)
+                </p>
+                <p class="text-[11px] text-secondary mt-0.5">Kiểm tra món ăn và thanh toán trực tiếp cho tài xế khi nhận hàng.</p>
+              </div>
+            </label>
+
+            <label class="payment-option flex items-start gap-3 p-3.5 rounded-2xl border-2 border-surface-container-high bg-surface-container-low cursor-pointer transition-all">
+              <input type="radio" name="paymentMethod" value="BANKING" class="mt-1 accent-[#ab3500]" />
+              <div class="flex-1">
+                <p class="text-sm font-bold text-on-surface flex items-center gap-1.5">
+                  <span class="material-symbols-outlined text-primary text-[18px]">account_balance</span>
+                  Chuyển khoản ngân hàng
+                </p>
+                <p class="text-[11px] text-secondary mt-0.5">Quán sẽ liên hệ cung cấp thông tin tài khoản sau khi đơn được xác nhận.</p>
+              </div>
+            </label>
+          </div>
+        </section>
+
+        <!-- SECTION 4: NOTE -->
+        <section class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-5 sm:p-6 shadow-sm space-y-3">
+          <div class="flex items-center gap-2 pb-3 border-b border-surface-container-high">
+            <span class="material-symbols-outlined text-primary text-[22px]">edit_note</span>
+            <h2 class="text-base font-bold text-on-surface">Ghi chú cho người bán</h2>
+          </div>
+          <textarea id="co-note" rows="3" placeholder="Ví dụ: Cho ít cay, không hành, giao trước 12h..."
+            class="w-full p-3.5 bg-surface-container-low border border-surface-container-high rounded-xl text-sm text-on-surface focus:outline-none focus:border-primary-container"></textarea>
+          <p class="text-[11px] text-secondary">Không bắt buộc. Ghi chú sẽ được chuyển tới quán cùng đơn hàng.</p>
+        </section>
+
+      </form>
+
+      <!-- RIGHT: ORDER SUMMARY -->
+      <aside class="lg:col-span-5 lg:sticky lg:top-24 space-y-6">
+
+        <div class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+          <div class="flex items-center justify-between gap-3">
+            <h2 class="text-base font-bold text-on-surface flex items-center gap-2">
+              <span class="material-symbols-outlined text-primary text-[20px]">receipt_long</span>
+              <span>Đơn hàng của bạn</span>
+            </h2>
+            <a href="/cart.html" class="text-[11px] font-semibold text-primary hover:underline">Sửa giỏ hàng</a>
+          </div>
+
+          <div class="flex items-center gap-2 p-3 rounded-xl bg-surface-container-low border border-surface-container-high">
+            <span class="material-symbols-outlined text-primary text-[18px]">storefront</span>
+            <div class="min-w-0">
+              <p class="text-[11px] text-secondary">Đặt món từ quán:</p>
+              <p id="chk-restaurant-name" class="text-xs font-bold text-on-surface truncate">Quán ăn</p>
+            </div>
+          </div>
+
+          <div id="checkout-items-list" class="divide-y divide-surface-container-high max-h-72 overflow-y-auto pr-1">
+            <!-- Items rendered by JS -->
+          </div>
+
+          <!-- Coupon (đọc từ lựa chọn ở trang giỏ hàng) -->
+          <div id="chk-coupon-badge" class="hidden p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-[11px] flex items-center gap-1.5">
+            <span class="material-symbols-outlined text-[16px]">sell</span>
+            <span id="chk-coupon-text"></span>
+          </div>
+
+          <div class="space-y-2 pt-3 border-t border-surface-container-high text-xs">
+            <div class="flex items-center justify-between text-secondary">
+              <span>Tạm tính (<span id="chk-items-count">0</span> món):</span>
+              <span id="chk-subtotal" class="font-bold text-on-surface">0 đ</span>
+            </div>
+            <div class="flex items-center justify-between text-secondary">
+              <span>Phí giao hàng:</span>
+              <span id="chk-shipping" class="font-bold text-on-surface">15.000 đ</span>
+            </div>
+            <div id="chk-discount-row" class="hidden flex items-center justify-between text-emerald-600 font-bold">
+              <span>Giảm giá ưu đãi:</span>
+              <span id="chk-discount">-0 đ</span>
+            </div>
+            <div class="flex items-center justify-between text-sm sm:text-base font-bold text-on-surface pt-3 border-t border-surface-container-high">
+              <span>Tổng thanh toán:</span>
+              <span id="chk-total" class="text-primary text-lg font-black">0 đ</span>
+            </div>
+          </div>
+
+          <button id="place-order-btn" type="button"
+            class="w-full h-12 rounded-2xl bg-primary hover:bg-primary-container text-white font-bold text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-60 disabled:cursor-not-allowed">
+            <span class="material-symbols-outlined text-[20px]">check_circle</span>
+            <span>Tiến hành đặt hàng</span>
+          </button>
+
+          <div class="flex items-center justify-between pt-1 text-xs">
+            <a href="/cart.html" class="inline-flex items-center gap-1 font-semibold text-secondary hover:text-primary transition-colors">
+              <span class="material-symbols-outlined text-[16px]">arrow_back</span>
+              <span>Quay lại giỏ hàng</span>
+            </a>
+            <a href="/explore.html" class="inline-flex items-center gap-1 font-semibold text-secondary hover:text-primary transition-colors">
+              <span class="material-symbols-outlined text-[16px]">storefront</span>
+              <span>Tiếp tục mua sắm</span>
+            </a>
+          </div>
+
+          <p class="text-[11px] text-secondary text-center leading-relaxed">
+            Bằng việc đặt hàng, bạn đồng ý với điều khoản sử dụng của FoodHub. Email phải được xác nhận trước khi đơn được tạo.
+          </p>
+        </div>
+
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- SUCCESS MODAL -->
+  <div id="checkout-success-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container-lowest rounded-3xl max-w-md w-full p-7 shadow-2xl border border-surface-container-high text-center">
+      <div class="w-16 h-16 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center mx-auto mb-4">
+        <span class="material-symbols-outlined text-4xl">check_circle</span>
+      </div>
+      <h3 class="text-lg font-black text-on-surface mb-1">Đặt hàng thành công!</h3>
+      <p class="text-xs text-secondary leading-relaxed mb-2">Mã đơn hàng của bạn là:</p>
+      <p id="success-order-code" class="text-xl font-black text-primary mb-4">FH-XXXX</p>
+      <p class="text-xs text-secondary leading-relaxed mb-6">Xác nhận đơn hàng đã được gửi tới email của bạn. Bạn có thể theo dõi tiến trình trong mục “Đơn hàng đã đặt”.</p>
+      <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+        <a href="/cart.html#orders" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-primary text-white font-bold text-sm shadow-md hover:bg-primary-container transition-all">
+          <span class="material-symbols-outlined text-[18px]">receipt_long</span>
+          <span>Xem đơn hàng của tôi</span>
+        </a>
+        <a href="/explore.html" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-surface-container-high hover:bg-surface-container text-on-surface font-bold text-sm transition-all">
+          <span class="material-symbols-outlined text-[18px]">storefront</span>
+          <span>Tiếp tục mua sắm</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Datalist tỉnh/thành phố -->
+  <datalist id="province-list">
+    <option value="Hà Nội"></option>
+    <option value="Hồ Chí Minh"></option>
+    <option value="Hải Phòng"></option>
+    <option value="Đà Nẵng"></option>
+    <option value="Cần Thơ"></option>
+    <option value="An Giang"></option>
+    <option value="Bà Rịa - Vũng Tàu"></option>
+    <option value="Bắc Giang"></option>
+    <option value="Bắc Kạn"></option>
+    <option value="Bạc Liêu"></option>
+    <option value="Bắc Ninh"></option>
+    <option value="Bến Tre"></option>
+    <option value="Bình Định"></option>
+    <option value="Bình Dương"></option>
+    <option value="Bình Phước"></option>
+    <option value="Bình Thuận"></option>
+    <option value="Cà Mau"></option>
+    <option value="Cao Bằng"></option>
+    <option value="Đắk Lắk"></option>
+    <option value="Đắk Nông"></option>
+    <option value="Điện Biên"></option>
+    <option value="Đồng Nai"></option>
+    <option value="Đồng Tháp"></option>
+    <option value="Gia Lai"></option>
+    <option value="Hà Giang"></option>
+    <option value="Hà Nam"></option>
+    <option value="Hà Tĩnh"></option>
+    <option value="Hải Dương"></option>
+    <option value="Hậu Giang"></option>
+    <option value="Hòa Bình"></option>
+    <option value="Hưng Yên"></option>
+    <option value="Khánh Hòa"></option>
+    <option value="Kiên Giang"></option>
+    <option value="Kon Tum"></option>
+    <option value="Lai Châu"></option>
+    <option value="Lâm Đồng"></option>
+    <option value="Lạng Sơn"></option>
+    <option value="Lào Cai"></option>
+    <option value="Long An"></option>
+    <option value="Nam Định"></option>
+    <option value="Nghệ An"></option>
+    <option value="Ninh Bình"></option>
+    <option value="Ninh Thuận"></option>
+    <option value="Phú Thọ"></option>
+    <option value="Phú Yên"></option>
+    <option value="Quảng Bình"></option>
+    <option value="Quảng Nam"></option>
+    <option value="Quảng Ngãi"></option>
+    <option value="Quảng Ninh"></option>
+    <option value="Quảng Trị"></option>
+    <option value="Sóc Trăng"></option>
+    <option value="Sơn La"></option>
+    <option value="Tây Ninh"></option>
+    <option value="Thái Bình"></option>
+    <option value="Thái Nguyên"></option>
+    <option value="Thanh Hóa"></option>
+    <option value="Thừa Thiên Huế"></option>
+    <option value="Tiền Giang"></option>
+    <option value="Trà Vinh"></option>
+    <option value="Tuyên Quang"></option>
+    <option value="Vĩnh Long"></option>
+    <option value="Vĩnh Phúc"></option>
+    <option value="Yên Bái"></option>
+  </datalist>
+
+  <!-- Footer -->
+  <footer></footer>
+
+  <script type="module" src="/src/checkout.js"></script>
+</body>
+</html>
