@@ -11,7 +11,8 @@ import {
   getCartCount,
   getCartSubtotal,
   formatVND,
-  updateCartBadge
+  updateCartBadge,
+  healCart
 } from './cart.js';
 
 let appliedCoupon = null;
@@ -33,9 +34,12 @@ const STATUS_MAP = {
   cancelled: { label: 'Đã hủy', color: 'bg-rose-100 text-rose-800 border-rose-300', icon: 'cancel' }
 };
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   initHeader('cart');
   initFooter();
+
+  // Tự động phân giải ID cho giỏ hàng cũ nếu có
+  await healCart();
 
   setupTabs();
   setupCartView();
@@ -63,7 +67,10 @@ function setupTabs() {
   const btnOrders = document.getElementById('tab-btn-orders');
 
   btnCart?.addEventListener('click', () => switchTab('cart'));
-  btnOrders?.addEventListener('click', () => switchTab('orders'));
+  btnOrders?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = '/order-tracking.html';
+  });
 
   document.getElementById('refresh-orders-btn')?.addEventListener('click', () => {
     loadMyOrders();
@@ -128,6 +135,23 @@ function setupCartView() {
     document.getElementById('applied-coupon-badge')?.classList.add('hidden');
     toast.info('Đã gỡ mã ưu đãi.');
     renderSummary();
+  });
+
+  // Proceed to Checkout button
+  document.getElementById('proceed-to-checkout-btn')?.addEventListener('click', (e) => {
+    const cart = getCart();
+    if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
+      e.preventDefault();
+      toast.warning('Giỏ hàng của bạn đang trống.');
+      return;
+    }
+    if (!isLoggedIn()) {
+      e.preventDefault();
+      toast.warning('Vui lòng đăng nhập để tiến hành đặt hàng.');
+      setTimeout(() => {
+        window.location.href = `/login.html?returnUrl=%2Fcheckout.html`;
+      }, 800);
+    }
   });
 
   // Fast coupon pills
@@ -259,18 +283,22 @@ function renderCart() {
       `;
 
       // Event listeners for item
+      const itemKey = (item.dishId !== null && item.dishId !== undefined && !isNaN(Number(item.dishId)) && Number(item.dishId) > 0)
+        ? Number(item.dishId)
+        : (item.name || item.id);
+
       itemEl.querySelector('.qty-btn-minus')?.addEventListener('click', () => {
-        updateQuantity(item.dishId, -1);
+        updateQuantity(itemKey, -1);
         renderCart();
       });
 
       itemEl.querySelector('.qty-btn-plus')?.addEventListener('click', () => {
-        updateQuantity(item.dishId, 1);
+        updateQuantity(itemKey, 1);
         renderCart();
       });
 
       itemEl.querySelector('.item-remove-btn')?.addEventListener('click', () => {
-        removeItem(item.dishId);
+        removeItem(itemKey);
         toast.info(`Đã xóa "${item.name}" khỏi giỏ hàng.`);
         renderCart();
       });
@@ -278,7 +306,12 @@ function renderCart() {
       const noteInput = itemEl.querySelector('.item-note-input');
       noteInput?.addEventListener('change', (e) => {
         const cartCurrent = getCart();
-        const curItem = cartCurrent.items.find(i => Number(i.dishId) === Number(item.dishId));
+        const curItem = cartCurrent.items.find(i => {
+          if (itemKey && typeof itemKey === 'number') {
+            return Number(i.dishId) === itemKey || Number(i.id) === itemKey;
+          }
+          return i.name === itemKey;
+        });
         if (curItem) {
           curItem.note = e.target.value.trim();
           saveCart(cartCurrent);
@@ -401,8 +434,8 @@ function setupCheckoutForm() {
       return;
     }
 
-    if (!/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(recipientPhone)) {
-      toast.warning('Số điện thoại không hợp lệ (cần 10 chữ số).');
+    if (!/^(?:\+?84|0)(3[2-9]|5[5-9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/.test(recipientPhone)) {
+      toast.warning('Số điện thoại không đúng chuẩn di động Việt Nam (10 số, bắt đầu 03x, 05x, 07x, 08x, 09x).');
       return;
     }
 
@@ -410,6 +443,9 @@ function setupCheckoutForm() {
       toast.warning('Vui lòng nhập địa chỉ giao hàng cụ thể.');
       return;
     }
+
+    // Tự động phân giải ID món nếu giỏ hàng còn món thiếu ID
+    await healCart(cart);
 
     const submitBtn = document.getElementById('submit-order-btn');
     try {
@@ -423,12 +459,20 @@ function setupCheckoutForm() {
       }
 
       const payload = {
-        restaurantId: cart.restaurantId,
-        items: cart.items.map(i => ({
-          dishId: i.dishId,
-          quantity: i.quantity,
-          note: i.note
-        })),
+        restaurantId: Number(cart.restaurantId),
+        items: cart.items.map(i => {
+          const rawId = i.dishId !== undefined ? i.dishId : i.id;
+          const numId = (rawId !== null && rawId !== undefined && !isNaN(Number(rawId)) && Number(rawId) > 0) ? Number(rawId) : undefined;
+          return {
+            dishId: numId,
+            id: numId,
+            name: i.name || '',
+            price: i.price || '',
+            priceNum: Number(i.priceNum) || 0,
+            quantity: Math.max(1, parseInt(i.quantity, 10) || 1),
+            note: i.note ? String(i.note).trim() : ''
+          };
+        }),
         recipientName,
         recipientPhone,
         deliveryAddress,

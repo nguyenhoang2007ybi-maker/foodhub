@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-  "dev": "concurrently \"vite\" \"node server/index.js\"",
-  "dev:server": "concurrently \"vite\" \"json-server --watch data/foodhub.json --port 3000\"",
-    "server": "node server/index.js",
+    "dev": "concurrently \"vite\" \"node --watch server/index.js\"",
+    "dev:server": "concurrently \"vite\" \"json-server --watch data/foodhub.json --port 3000\"",
+    "server": "node --watch server/index.js",
     "seed": "node server/seed.js",
     "test:api": "node test-api.js",
     "build": "vite build",

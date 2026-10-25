@@ -91,6 +91,10 @@
             <span class="material-symbols-outlined text-[18px]">rate_review</span>
             <span>Đánh giá của tôi</span>
           </button>
+          <button id="tab-addresses-btn" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-xs font-semibold text-secondary hover:text-on-surface hover:bg-surface-container-low text-left transition-all">
+            <span class="material-symbols-outlined text-[18px]">home_pin</span>
+            <span>Sổ địa chỉ nhận hàng</span>
+          </button>
         </div>
       </div>
 
@@ -220,9 +224,98 @@
             <!-- Populated dynamically -->
           </div>
         </div>
+
+        <!-- Panel 4: Address Book -->
+        <div id="panel-addresses" class="hidden bg-surface-container-lowest border border-surface-container-high rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+          <div class="pb-4 border-b border-surface-container-high flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <h3 class="text-lg font-bold text-on-surface">Sổ địa chỉ nhận hàng</h3>
+              <p class="text-xs text-secondary mt-1">Lưu trữ địa chỉ giao hàng để đặt món nhanh chóng khi thanh toán</p>
+            </div>
+            <button id="open-add-address-btn" type="button" class="h-10 px-4 rounded-xl bg-primary text-white text-xs font-bold hover:bg-primary-container transition-all flex items-center gap-1.5 cursor-pointer self-start sm:self-auto shadow-sm">
+              <span class="material-symbols-outlined text-[18px]">add</span>
+              <span>Thêm địa chỉ mới</span>
+            </button>
+          </div>
+
+          <div id="addresses-list-container" class="space-y-3">
+            <!-- Dynamic Addresses -->
+          </div>
+          </div>
+        </div>
       </div>
     </div>
   </main>
+
+  <!-- ADD / EDIT ADDRESS MODAL -->
+  <div id="address-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+    <div class="bg-surface-container-lowest rounded-3xl max-w-lg w-full p-6 sm:p-8 shadow-2xl border border-surface-container-high animate-in fade-in zoom-in-95">
+      <div class="flex items-center justify-between pb-3 border-b border-surface-container-high mb-4">
+        <h3 id="address-modal-title" class="text-base font-bold text-on-surface">Thêm địa chỉ nhận hàng</h3>
+        <button id="close-address-modal-btn" type="button" class="text-secondary hover:text-on-surface p-1 rounded-full hover:bg-surface-container-low">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <form id="address-form" class="space-y-4">
+        <input type="hidden" id="modal-address-id" value="" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label for="addr-modal-name" class="block text-xs font-bold text-on-surface mb-1">Tên người nhận <span class="text-rose-500">*</span></label>
+            <input id="addr-modal-name" type="text" required minlength="2" placeholder="Nguyễn Văn A" class="w-full h-10 px-3 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container" />
+          </div>
+          <div>
+            <label for="addr-modal-phone" class="block text-xs font-bold text-on-surface mb-1">Số điện thoại <span class="text-rose-500">*</span></label>
+            <input id="addr-modal-phone" type="tel" required placeholder="0912345678" class="w-full h-10 px-3 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container" />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div>
+            <label for="addr-modal-province" class="block text-xs font-bold text-on-surface mb-1">Tỉnh / Thành phố</label>
+            <input id="addr-modal-province" type="text" value="Hà Nội" required class="w-full h-10 px-3 bg-surface-container-high/40 border border-surface-container-high rounded-xl text-xs text-on-surface font-semibold" />
+          </div>
+          <div>
+            <label for="addr-modal-district" class="block text-xs font-bold text-on-surface mb-1">Quận / Huyện <span class="text-rose-500">*</span></label>
+            <select id="addr-modal-district" required class="w-full h-10 px-3 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container">
+              <option value="">-- Chọn Quận --</option>
+              <option value="Ba Đình">Ba Đình</option>
+              <option value="Hoàn Kiếm">Hoàn Kiếm</option>
+              <option value="Cầu Giấy">Cầu Giấy</option>
+              <option value="Đống Đa">Đống Đa</option>
+              <option value="Hai Bà Trưng">Hai Bà Trưng</option>
+              <option value="Tây Hồ">Tây Hồ</option>
+              <option value="Thanh Xuân">Thanh Xuân</option>
+              <option value="Nam Từ Liêm">Nam Từ Liêm</option>
+              <option value="Bắc Từ Liêm">Bắc Từ Liêm</option>
+              <option value="Hà Đông">Hà Đông</option>
+              <option value="Long Biên">Long Biên</option>
+              <option value="Hoàng Mai">Hoàng Mai</option>
+            </select>
+          </div>
+          <div>
+            <label for="addr-modal-ward" class="block text-xs font-bold text-on-surface mb-1">Phường / Xã <span class="text-rose-500">*</span></label>
+            <input id="addr-modal-ward" type="text" required placeholder="Dịch Vọng Hậu" class="w-full h-10 px-3 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container" />
+          </div>
+        </div>
+
+        <div>
+          <label for="addr-modal-street" class="block text-xs font-bold text-on-surface mb-1">Số nhà, ngõ/ngách, tên đường <span class="text-rose-500">*</span></label>
+          <input id="addr-modal-street" type="text" required minlength="3" placeholder="Số 12 ngõ 45 Cầu Giấy" class="w-full h-10 px-3 bg-surface-container-low border border-surface-container-high rounded-xl text-xs text-on-surface focus:outline-none focus:border-primary-container" />
+        </div>
+
+        <div class="flex items-center gap-2 pt-1">
+          <input id="addr-modal-default" type="checkbox" class="w-4 h-4 rounded text-primary focus:ring-primary/20 cursor-pointer" />
+          <label for="addr-modal-default" class="text-xs text-secondary cursor-pointer hover:text-on-surface">Đặt làm địa chỉ nhận hàng mặc định</label>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-surface-container-high">
+          <button id="cancel-addr-modal-btn" type="button" class="h-10 px-4 rounded-xl text-xs font-semibold text-secondary hover:bg-surface-container-low">Hủy</button>
+          <button type="submit" class="h-10 px-5 rounded-xl bg-primary hover:bg-primary-container text-white font-bold text-xs shadow-sm">Lưu địa chỉ</button>
+        </div>
+      </form>
+    </div>
+  </div>
 
   <footer></footer>
 

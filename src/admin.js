@@ -101,6 +101,7 @@ function setupNavigation() {
   const navUsers = document.getElementById('nav-users');
   const navReviews = document.getElementById('nav-reviews');
   const navOrders = document.getElementById('nav-orders');
+  const navCoupons = document.getElementById('nav-coupons');
 
   const secDashboard = document.getElementById('section-dashboard');
   const secRestaurants = document.getElementById('section-restaurants');
@@ -108,6 +109,7 @@ function setupNavigation() {
   const secUsers = document.getElementById('section-users');
   const secReviews = document.getElementById('section-reviews');
   const secOrders = document.getElementById('section-orders');
+  const secCoupons = document.getElementById('section-coupons');
 
   const tabs = [
     { btn: navDashboard, sec: secDashboard, load: loadDashboardStats },
@@ -115,7 +117,8 @@ function setupNavigation() {
     { btn: navCategories, sec: secCategories, load: loadCategoriesManager },
     { btn: navUsers, sec: secUsers, load: loadUsersManager },
     { btn: navReviews, sec: secReviews, load: loadReviewsManager },
-    { btn: navOrders, sec: secOrders, load: loadOrdersManager }
+    { btn: navOrders, sec: secOrders, load: loadOrdersManager },
+    { btn: navCoupons, sec: secCoupons, load: loadCouponsManager }
   ];
 
   tabs.forEach(({ btn, sec, load }) => {
@@ -313,6 +316,7 @@ async function loadRestaurantsManager() {
   }
 
   setupRestaurantModalEvents();
+  setupMenuModalEventsOnce();
 }
 
 function renderRestaurantsTable(list) {
@@ -326,6 +330,7 @@ function renderRestaurantsTable(list) {
 
   tbody.innerHTML = '';
   list.forEach(r => {
+    const dishCount = Array.isArray(r.menu) ? r.menu.length : 0;
     const tr = document.createElement('tr');
     tr.className = 'hover:bg-surface-container-low transition-colors';
     tr.innerHTML = `
@@ -338,17 +343,23 @@ function renderRestaurantsTable(list) {
               <span class="material-symbols-outlined text-[13px] text-primary flex-shrink-0">location_on</span>
               <span class="truncate">${escapeHtml(r.address)}</span>
             </p>
-            ${r.mapUrl ? `
-              <span class="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded font-semibold mt-1" title="Đã có link Google Maps riêng">
-                <span class="material-symbols-outlined text-[12px]">map</span>
-                <span>Bản đồ riêng</span>
+            <div class="flex items-center gap-1.5 flex-wrap mt-1">
+              ${r.mapUrl ? `
+                <span class="inline-flex items-center gap-1 text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-semibold" title="Đã có link Google Maps riêng">
+                  <span class="material-symbols-outlined text-[12px]">map</span>
+                  <span>Bản đồ riêng</span>
+                </span>
+              ` : `
+                <span class="inline-flex items-center gap-1 text-[10px] text-secondary bg-surface-container-low px-1.5 py-0.5 rounded font-medium" title="Bản đồ tự động theo tên và địa chỉ">
+                  <span class="material-symbols-outlined text-[12px]">explore</span>
+                  <span>Bản đồ tự động</span>
+                </span>
+              `}
+              <span class="inline-flex items-center gap-1 text-[10px] text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded font-semibold" title="Số lượng món ăn trong thực đơn">
+                <span class="material-symbols-outlined text-[12px]">restaurant_menu</span>
+                <span>${dishCount} món</span>
               </span>
-            ` : `
-              <span class="inline-flex items-center gap-1 text-[10px] text-secondary bg-surface-container-low px-1.5 py-0.2 rounded font-medium mt-1" title="Bản đồ tự động theo tên và địa chỉ">
-                <span class="material-symbols-outlined text-[12px]">explore</span>
-                <span>Bản đồ tự động</span>
-              </span>
-            `}
+            </div>
           </div>
         </div>
       </td>
@@ -369,6 +380,9 @@ function renderRestaurantsTable(list) {
           <a href="/restaurant-detail.html?id=${r.id}" target="_blank" class="p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary-container/10 transition-colors" title="Xem chi tiết & bản đồ quán trên website">
             <span class="material-symbols-outlined text-[18px]">open_in_new</span>
           </a>
+          <button class="menu-rest-btn p-1.5 rounded-lg text-secondary hover:text-amber-600 hover:bg-amber-50 transition-colors" data-id="${r.id}" title="Quản lý thực đơn (${dishCount} món)">
+            <span class="material-symbols-outlined text-[18px]">restaurant_menu</span>
+          </button>
           <button class="edit-rest-btn p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary-container/10 transition-colors" data-id="${r.id}" title="Sửa thông tin & vị trí bản đồ">
             <span class="material-symbols-outlined text-[18px]">edit</span>
           </button>
@@ -379,6 +393,7 @@ function renderRestaurantsTable(list) {
       </td>
     `;
 
+    tr.querySelector('.menu-rest-btn').onclick = () => openRestaurantMenuModal(r);
     tr.querySelector('.edit-rest-btn').onclick = () => openRestaurantModal(r);
     tr.querySelector('.del-rest-btn').onclick = () => deleteRestaurant(r.id, r.name);
 
@@ -667,6 +682,304 @@ async function deleteRestaurant(id, name) {
 }
 
 // ==========================================
+// 2.1 QUẢN LÝ THỰC ĐƠN QUÁN ĂN (MENU MODAL)
+// ==========================================
+let currentMenuRestaurant = null;
+let currentMenuList = [];
+let menuModalEventsBound = false;
+
+function setupMenuModalEventsOnce() {
+  if (menuModalEventsBound) return;
+  menuModalEventsBound = true;
+
+  const modal = document.getElementById('admin-menu-modal');
+  const closeBtn = document.getElementById('admin-menu-modal-close');
+  const addDishBtn = document.getElementById('admin-menu-add-dish-btn');
+  const cancelBtn = document.getElementById('dish-form-cancel-btn');
+  const form = document.getElementById('admin-dish-form');
+
+  if (closeBtn) closeBtn.onclick = () => closeRestaurantMenuModal();
+  if (cancelBtn) cancelBtn.onclick = () => hideDishForm();
+
+  if (addDishBtn) {
+    addDishBtn.onclick = () => {
+      openDishForm();
+    };
+  }
+
+  if (form) {
+    form.onsubmit = async (e) => {
+      e.preventDefault();
+      await handleDishFormSubmit();
+    };
+  }
+
+  if (modal) {
+    modal.onclick = (e) => {
+      if (e.target === modal) closeRestaurantMenuModal();
+    };
+  }
+}
+
+function openRestaurantMenuModal(restaurant) {
+  currentMenuRestaurant = restaurant;
+  const modal = document.getElementById('admin-menu-modal');
+  const restName = document.getElementById('admin-menu-modal-rest-name');
+  if (restName) {
+    restName.textContent = `${restaurant.name} (${restaurant.category || 'Món ăn'})`;
+  }
+
+  hideDishForm();
+  modal.classList.remove('hidden');
+  loadRestaurantMenu(restaurant.id);
+}
+
+function closeRestaurantMenuModal() {
+  const modal = document.getElementById('admin-menu-modal');
+  if (modal) modal.classList.add('hidden');
+  hideDishForm();
+  currentMenuRestaurant = null;
+  currentMenuList = [];
+}
+
+function openDishForm(dish = null) {
+  const formWrapper = document.getElementById('admin-dish-form-wrapper');
+  const formTitle = document.getElementById('admin-dish-form-title');
+  const idInput = document.getElementById('dish-form-id');
+  const nameInput = document.getElementById('dish-input-name');
+  const priceInput = document.getElementById('dish-input-price');
+  const catInput = document.getElementById('dish-input-category');
+  const imgInput = document.getElementById('dish-input-image');
+  const descInput = document.getElementById('dish-input-desc');
+  const availInput = document.getElementById('dish-input-available');
+
+  if (!formWrapper) return;
+
+  if (dish) {
+    formTitle.innerHTML = `<span class="material-symbols-outlined text-primary text-[18px]">edit</span><span>Chỉnh sửa món: ${escapeHtml(dish.name)}</span>`;
+    idInput.value = dish.id;
+    nameInput.value = dish.name || '';
+    priceInput.value = dish.priceNum || (typeof dish.price === 'number' ? dish.price : parseInt(String(dish.price).replace(/\D/g, ''), 10)) || 50000;
+    catInput.value = dish.category || (currentMenuRestaurant ? currentMenuRestaurant.category : '');
+    imgInput.value = dish.image || '';
+    descInput.value = dish.description || '';
+    availInput.checked = dish.isAvailable !== false && dish.status !== 'out_of_stock';
+  } else {
+    formTitle.innerHTML = `<span class="material-symbols-outlined text-primary text-[18px]">add_circle</span><span>Thêm món ăn mới vào thực đơn</span>`;
+    idInput.value = '';
+    nameInput.value = '';
+    priceInput.value = '';
+    catInput.value = currentMenuRestaurant ? currentMenuRestaurant.category : '';
+    imgInput.value = '';
+    descInput.value = '';
+    availInput.checked = true;
+  }
+
+  formWrapper.classList.remove('hidden');
+  formWrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  nameInput.focus();
+}
+
+function hideDishForm() {
+  const formWrapper = document.getElementById('admin-dish-form-wrapper');
+  const form = document.getElementById('admin-dish-form');
+  if (formWrapper) formWrapper.classList.add('hidden');
+  if (form) form.reset();
+}
+
+async function loadRestaurantMenu(restaurantId) {
+  const tbody = document.getElementById('admin-menu-tbody');
+  if (!tbody) return;
+
+  tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-secondary">Đang tải danh sách món ăn...</td></tr>`;
+
+  try {
+    const res = await api.get(`/restaurants/${restaurantId}/menu`);
+    if (res && res.success && Array.isArray(res.data)) {
+      currentMenuList = res.data;
+      // Cập nhật lại trong cachedRestaurants
+      const found = cachedRestaurants.find(r => r.id === restaurantId);
+      if (found) {
+        found.menu = currentMenuList;
+      }
+      renderRestaurantMenuTable(currentMenuList);
+    } else {
+      tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-rose-500">Không thể tải thực đơn.</td></tr>`;
+    }
+  } catch (err) {
+    console.error('Lỗi tải thực đơn món:', err);
+    tbody.innerHTML = `<tr><td colspan="5" class="p-8 text-center text-rose-500">Lỗi khi tải thực đơn món: ${escapeHtml(err.message)}</td></tr>`;
+  }
+}
+
+function renderRestaurantMenuTable(menu) {
+  const tbody = document.getElementById('admin-menu-tbody');
+  if (!tbody) return;
+
+  if (!menu || menu.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="5" class="p-8 text-center text-secondary">
+          <span class="material-symbols-outlined text-3xl mb-1 text-secondary/60">menu_book</span>
+          <p class="font-medium">Quán chưa có món ăn nào trong thực đơn.</p>
+          <p class="text-[11px] mt-1">Bấm "Thêm món mới" phía trên để bổ sung món ăn.</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  menu.forEach((dish, idx) => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-surface-container-low transition-colors';
+
+    const isAvail = dish.isAvailable !== false && dish.status !== 'out_of_stock';
+    const priceNum = dish.priceNum || (typeof dish.price === 'number' ? dish.price : parseInt(String(dish.price).replace(/\D/g, ''), 10)) || 0;
+    const priceFormatted = new Intl.NumberFormat('vi-VN').format(priceNum) + 'đ';
+
+    tr.innerHTML = `
+      <td class="p-3">
+        <div class="flex items-center gap-3">
+          <span class="text-[11px] text-secondary font-bold w-5">${idx + 1}</span>
+          <img src="${dish.image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=120&q=80'}" class="w-12 h-12 rounded-xl object-cover flex-shrink-0 border border-surface-container" />
+          <div class="min-w-0">
+            <h5 class="font-bold text-xs text-on-surface truncate">${escapeHtml(dish.name)}</h5>
+            <p class="text-[11px] text-secondary truncate max-w-xs mt-0.5" title="${escapeHtml(dish.description || '')}">
+              ${escapeHtml(dish.description || 'Chưa có mô tả')}
+            </p>
+          </div>
+        </div>
+      </td>
+      <td class="p-3">
+        <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-surface-container-high text-secondary">
+          ${escapeHtml(dish.category || 'Món chính')}
+        </span>
+      </td>
+      <td class="p-3 font-bold text-primary text-xs">
+        ${priceFormatted}
+      </td>
+      <td class="p-3">
+        ${isAvail ? `
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
+            <span class="material-symbols-outlined text-[12px]">check_circle</span>
+            <span>Còn hàng</span>
+          </span>
+        ` : `
+          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">
+            <span class="material-symbols-outlined text-[12px]">do_not_disturb_on</span>
+            <span>Hết hàng</span>
+          </span>
+        `}
+      </td>
+      <td class="p-3 text-right">
+        <div class="flex items-center justify-end gap-1">
+          <button class="toggle-stock-btn p-1.5 rounded-lg text-secondary hover:text-amber-600 hover:bg-amber-50 transition-colors" title="${isAvail ? 'Đánh dấu HẾT HÀNG' : 'Đánh dấu CÒN HÀNG'}">
+            <span class="material-symbols-outlined text-[18px]">${isAvail ? 'toggle_on' : 'toggle_off'}</span>
+          </button>
+          <button class="edit-dish-btn p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-primary-container/10 transition-colors" title="Sửa thông tin món">
+            <span class="material-symbols-outlined text-[18px]">edit</span>
+          </button>
+          <button class="del-dish-btn p-1.5 rounded-lg text-secondary hover:text-rose-600 hover:bg-rose-50 transition-colors" title="Xóa món khỏi thực đơn">
+            <span class="material-symbols-outlined text-[18px]">delete</span>
+          </button>
+        </div>
+      </td>
+    `;
+
+    tr.querySelector('.toggle-stock-btn').onclick = () => toggleDishStockStatus(dish);
+    tr.querySelector('.edit-dish-btn').onclick = () => openDishForm(dish);
+    tr.querySelector('.del-dish-btn').onclick = () => deleteDishItem(dish);
+
+    tbody.appendChild(tr);
+  });
+}
+
+async function handleDishFormSubmit() {
+  if (!currentMenuRestaurant) return;
+
+  const dishId = document.getElementById('dish-form-id').value;
+  const name = document.getElementById('dish-input-name').value.trim();
+  const priceVal = parseFloat(document.getElementById('dish-input-price').value);
+  const category = document.getElementById('dish-input-category').value.trim();
+  const image = document.getElementById('dish-input-image').value.trim();
+  const description = document.getElementById('dish-input-desc').value.trim();
+  const isAvailable = document.getElementById('dish-input-available').checked;
+
+  if (!name) {
+    toast.error('Vui lòng nhập tên món ăn.');
+    return;
+  }
+  if (Number.isNaN(priceVal) || priceVal < 0) {
+    toast.error('Vui lòng nhập giá bán hợp lệ.');
+    return;
+  }
+
+  const payload = {
+    name,
+    price: `${new Intl.NumberFormat('vi-VN').format(priceVal)}đ`,
+    priceNum: priceVal,
+    category: category || currentMenuRestaurant.category || 'Món chính',
+    image: image || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=500&q=80',
+    description: description || '',
+    isAvailable,
+    status: isAvailable ? 'available' : 'out_of_stock'
+  };
+
+  try {
+    let res;
+    if (dishId) {
+      res = await api.put(`/restaurants/${currentMenuRestaurant.id}/menu/${dishId}`, payload);
+    } else {
+      res = await api.post(`/restaurants/${currentMenuRestaurant.id}/menu`, payload);
+    }
+
+    if (res && res.success) {
+      toast.success(res.message || 'Lưu món ăn thành công!');
+      hideDishForm();
+      await loadRestaurantMenu(currentMenuRestaurant.id);
+      renderRestaurantsTable(cachedRestaurants);
+    }
+  } catch (err) {
+    toast.error(err.message || 'Lỗi khi lưu món ăn.');
+  }
+}
+
+async function toggleDishStockStatus(dish) {
+  if (!currentMenuRestaurant) return;
+
+  const newAvailable = !(dish.isAvailable !== false && dish.status !== 'out_of_stock');
+  try {
+    const res = await api.patch(`/restaurants/${currentMenuRestaurant.id}/menu/${dish.id}/status`, {
+      isAvailable: newAvailable,
+      status: newAvailable ? 'available' : 'out_of_stock'
+    });
+    if (res && res.success) {
+      toast.success(`Đã cập nhật món "${dish.name}": ${newAvailable ? 'Còn hàng' : 'Hết hàng'}`);
+      await loadRestaurantMenu(currentMenuRestaurant.id);
+    }
+  } catch (err) {
+    toast.error(err.message || 'Lỗi khi cập nhật trạng thái món.');
+  }
+}
+
+async function deleteDishItem(dish) {
+  if (!currentMenuRestaurant) return;
+  if (!confirm(`Bạn có chắc chắn muốn xóa món "${dish.name}" khỏi thực đơn?`)) return;
+
+  try {
+    const res = await api.delete(`/restaurants/${currentMenuRestaurant.id}/menu/${dish.id}`);
+    if (res && res.success) {
+      toast.success(res.message || 'Đã xóa món ăn khỏi thực đơn.');
+      await loadRestaurantMenu(currentMenuRestaurant.id);
+      renderRestaurantsTable(cachedRestaurants);
+    }
+  } catch (err) {
+    toast.error(err.message || 'Lỗi khi xóa món ăn.');
+  }
+}
+
+// ==========================================
 // 3. CATEGORIES MANAGEMENT
 // ==========================================
 async function loadCategoriesManager() {
@@ -801,7 +1114,7 @@ function renderUsersTable(users) {
           <button class="del-user-btn text-rose-500 hover:text-rose-700 p-1.5 rounded-lg hover:bg-rose-50 transition-colors" data-id="${u.id}" title="Xóa tài khoản">
             <span class="material-symbols-outlined text-[18px]">delete</span>
           </button>
-        ` : '<span class="text-secondary text-[11px]">Không thể xóa</span>')}
+        ` : '<span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 cursor-default" title="Tài khoản khách hàng được bảo vệ, chỉ có thể khóa tài khoản">Được bảo vệ</span>')}
       </td>
     `;
 
@@ -914,28 +1227,20 @@ function updateFilterButtonsUI() {
 
 function updateReviewCounts() {
   const total = cachedReviews.length;
-  const pending = cachedReviews.filter(r => r.status === 'pending').length;
-  const approved = cachedReviews.filter(r => r.status === 'approved').length;
-  const rejected = cachedReviews.filter(r => r.status === 'rejected').length;
+  const approved = cachedReviews.filter(r => r.status === 'approved' || !r.status).length;
+  const rejected = cachedReviews.filter(r => r.status === 'rejected' || r.status === 'hidden').length;
 
   const countAll = document.getElementById('rev-filter-count-all');
-  const countPending = document.getElementById('rev-filter-count-pending');
   const countApproved = document.getElementById('rev-filter-count-approved');
   const countRejected = document.getElementById('rev-filter-count-rejected');
   const navBadge = document.getElementById('nav-pending-badge');
 
   if (countAll) countAll.textContent = `(${total})`;
-  if (countPending) countPending.textContent = pending;
   if (countApproved) countApproved.textContent = approved;
   if (countRejected) countRejected.textContent = rejected;
 
   if (navBadge) {
-    if (pending > 0) {
-      navBadge.textContent = pending;
-      navBadge.classList.remove('hidden');
-    } else {
-      navBadge.classList.add('hidden');
-    }
+    navBadge.classList.add('hidden');
   }
 }
 
@@ -972,8 +1277,10 @@ async function loadReviewsManager() {
 function filterAndRenderReviews() {
   let list = [...cachedReviews];
 
-  if (currentReviewFilter !== 'all') {
-    list = list.filter(r => r.status === currentReviewFilter);
+  if (currentReviewFilter === 'approved') {
+    list = list.filter(r => r.status === 'approved' || !r.status);
+  } else if (currentReviewFilter === 'rejected') {
+    list = list.filter(r => r.status === 'rejected' || r.status === 'hidden');
   }
 
   if (currentReviewSearch) {
@@ -1051,10 +1358,10 @@ function renderReviewsTable(reviews) {
     tr.className = 'hover:bg-surface-container-low transition-colors';
 
     let statusBadge = '';
-    if (rev.status === 'approved') {
-      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Đã duyệt</span>`;
+    if (rev.status === 'approved' || !rev.status) {
+      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Công khai</span>`;
     } else if (rev.status === 'pending') {
-      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300 animate-pulse"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Chờ duyệt</span>`;
+      statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-amber-50 text-amber-800 border border-amber-300"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Chờ xử lý</span>`;
     } else if (rev.status === 'rejected') {
       statusBadge = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Đã từ chối</span>`;
     } else {
@@ -1127,8 +1434,7 @@ function renderReviewsTable(reviews) {
           ` : ''}
 
           <select class="rev-status-select bg-surface-container-low border border-surface-container rounded-xl px-2 py-1 text-[11px] font-semibold text-on-surface focus:outline-none focus:border-primary-container" data-id="${rev.id}" title="Đổi trạng thái nhanh">
-            <option value="pending" ${rev.status === 'pending' ? 'selected' : ''}>Chờ duyệt</option>
-            <option value="approved" ${rev.status === 'approved' ? 'selected' : ''}>Đã duyệt</option>
+            <option value="approved" ${rev.status === 'approved' ? 'selected' : ''}>Công khai</option>
             <option value="rejected" ${rev.status === 'rejected' ? 'selected' : ''}>Từ chối</option>
             <option value="hidden" ${rev.status === 'hidden' ? 'selected' : ''}>Đã ẩn</option>
           </select>
@@ -1177,7 +1483,8 @@ let currentOrderFilter = 'all';
 const ORDER_STATUS_MAP = {
   pending: { label: 'Chờ xác nhận', cls: 'bg-amber-100 text-amber-800 border-amber-300' },
   confirmed: { label: 'Đã xác nhận', cls: 'bg-sky-100 text-sky-800 border-sky-300' },
-  preparing: { label: 'Đang nấu', cls: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+  preparing: { label: 'Đang chuẩn bị', cls: 'bg-indigo-100 text-indigo-800 border-indigo-300' },
+  ready: { label: 'Sẵn sàng giao', cls: 'bg-purple-100 text-purple-800 border-purple-300' },
   shipping: { label: 'Đang giao', cls: 'bg-orange-100 text-orange-800 border-orange-300' },
   completed: { label: 'Hoàn tất', cls: 'bg-emerald-100 text-emerald-800 border-emerald-300' },
   cancelled: { label: 'Đã hủy', cls: 'bg-rose-100 text-rose-800 border-rose-300' }
@@ -1242,7 +1549,7 @@ async function refreshOrdersData() {
 
       if (totalEl) totalEl.textContent = s.total || 0;
       if (pendingEl) pendingEl.textContent = s.pending || 0;
-      if (shippingEl) shippingEl.textContent = (s.confirmed || 0) + (s.preparing || 0) + (s.shipping || 0);
+      if (shippingEl) shippingEl.textContent = (s.confirmed || 0) + (s.preparing || 0) + (s.ready || 0) + (s.shipping || 0);
       if (completedEl) completedEl.textContent = s.completed || 0;
       if (revenueEl) revenueEl.textContent = formatVNDOrder(s.totalRevenue || 0);
 
@@ -1347,7 +1654,8 @@ function renderAdminOrdersTable(orders) {
         <select class="admin-order-status-select h-8 px-2 rounded-lg text-xs font-bold border border-surface-container bg-surface-container-lowest focus:outline-none focus:border-primary-container cursor-pointer" data-order-id="${order.id}">
           <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Chờ xác nhận</option>
           <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Đã xác nhận</option>
-          <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Đang nấu món</option>
+          <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Đang chuẩn bị</option>
+          <option value="ready" ${order.status === 'ready' ? 'selected' : ''}>Sẵn sàng giao</option>
           <option value="shipping" ${order.status === 'shipping' ? 'selected' : ''}>Đang giao hàng</option>
           <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Hoàn tất</option>
           <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Đã hủy</option>
@@ -1424,7 +1732,8 @@ function openAdminOrderDetailModal(order) {
           <select id="modal-update-status-select" class="w-full h-9 px-3 bg-surface-container-lowest border border-surface-container rounded-xl text-xs font-bold focus:outline-none focus:border-primary-container">
             <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>Chờ xác nhận</option>
             <option value="confirmed" ${order.status === 'confirmed' ? 'selected' : ''}>Đã xác nhận</option>
-            <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Đang nấu món</option>
+            <option value="preparing" ${order.status === 'preparing' ? 'selected' : ''}>Đang chuẩn bị</option>
+            <option value="ready" ${order.status === 'ready' ? 'selected' : ''}>Sẵn sàng giao</option>
             <option value="shipping" ${order.status === 'shipping' ? 'selected' : ''}>Đang giao hàng</option>
             <option value="completed" ${order.status === 'completed' ? 'selected' : ''}>Hoàn tất</option>
             <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Đã hủy</option>
@@ -1533,3 +1842,340 @@ function formatDateAdmin(iso) {
   const two = n => String(n).padStart(2, '0');
   return `${two(d.getDate())}/${two(d.getMonth() + 1)}/${d.getFullYear()} ${two(d.getHours())}:${two(d.getMinutes())}`;
 }
+
+
+// ==========================================
+// 7. COUPONS MANAGEMENT
+// ==========================================
+let cachedAdminCoupons = [];
+let couponControlsBound = false;
+
+async function loadCouponsManager() {
+  setupCouponControls();
+  await refreshCouponsData();
+}
+
+function setupCouponControls() {
+  if (couponControlsBound) return;
+  couponControlsBound = true;
+
+  // Refresh
+  document.getElementById('admin-refresh-coupons-btn')?.addEventListener('click', async () => {
+    await refreshCouponsData();
+    toast.info('Đã làm mới danh sách mã giảm giá.');
+  });
+
+  // Add new
+  document.getElementById('admin-add-coupon-btn')?.addEventListener('click', () => {
+    openCouponModal();
+  });
+
+  // Close modal
+  document.getElementById('close-coupon-modal')?.addEventListener('click', closeCouponModal);
+  document.getElementById('cancel-coupon-modal')?.addEventListener('click', closeCouponModal);
+
+  // Form submit
+  document.getElementById('coupon-modal-form')?.addEventListener('submit', handleCouponFormSubmit);
+
+  // Change type label hint
+  const typeSelect = document.getElementById('modal-coupon-type');
+  const valLabel = document.getElementById('modal-coupon-value-label');
+  const valInput = document.getElementById('modal-coupon-value');
+  typeSelect?.addEventListener('change', () => {
+    if (typeSelect.value === 'percent') {
+      if (valLabel) valLabel.textContent = 'Mức giảm (%) (*):';
+      if (valInput) {
+        valInput.max = '100';
+        valInput.placeholder = 'VD: 10, 20 (%)';
+      }
+    } else if (typeSelect.value === 'fixed') {
+      if (valLabel) valLabel.textContent = 'Mức giảm (đ) (*):';
+      if (valInput) {
+        valInput.removeAttribute('max');
+        valInput.placeholder = 'VD: 30000, 50000 (đ)';
+      }
+    } else if (typeSelect.value === 'freeship') {
+      if (valLabel) valLabel.textContent = 'Mức hỗ trợ ship tối đa (đ) (*):';
+      if (valInput) {
+        valInput.removeAttribute('max');
+        valInput.placeholder = 'VD: 15000 (đ)';
+      }
+    }
+  });
+}
+
+async function refreshCouponsData() {
+  const tbody = document.getElementById('admin-coupons-tbody');
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="p-8 text-center text-secondary">
+          <div class="inline-flex items-center gap-2">
+            <span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span>
+            <span>Đang tải danh sách mã giảm giá...</span>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  try {
+    const res = await api.get('/coupons/admin/all');
+    if (res && res.success && Array.isArray(res.data)) {
+      cachedAdminCoupons = res.data;
+      updateCouponStats(cachedAdminCoupons);
+      renderCouponsTable(cachedAdminCoupons);
+    } else {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-rose-500">Không tải được danh sách mã.</td></tr>`;
+    }
+  } catch (err) {
+    console.error('Lỗi tải mã giảm giá:', err);
+    if (tbody) tbody.innerHTML = `<tr><td colspan="7" class="p-8 text-center text-rose-500">Lỗi: ${err.message || 'Lỗi kết nối'}</td></tr>`;
+  }
+}
+
+function updateCouponStats(coupons) {
+  const total = coupons.length;
+  const active = coupons.filter(c => c.isActive !== false).length;
+  const used = coupons.reduce((sum, c) => sum + (Number(c.usedCount) || 0), 0);
+
+  const statTotal = document.getElementById('admin-coupon-stat-total');
+  const statActive = document.getElementById('admin-coupon-stat-active');
+  const statUsed = document.getElementById('admin-coupon-stat-used');
+
+  if (statTotal) statTotal.textContent = total;
+  if (statActive) statActive.textContent = active;
+  if (statUsed) statUsed.textContent = used;
+}
+
+function renderCouponsTable(coupons) {
+  const tbody = document.getElementById('admin-coupons-tbody');
+  if (!tbody) return;
+
+  if (coupons.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="7" class="p-10 text-center text-secondary">
+          <span class="material-symbols-outlined text-4xl text-secondary/30 mb-2">loyalty</span>
+          <p class="font-semibold text-on-surface text-xs">Chưa có mã giảm giá nào</p>
+          <p class="text-[11px] text-secondary mt-0.5">Bấm "Thêm mã mới" để tạo mã khuyến mãi cho khách hàng</p>
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  tbody.innerHTML = '';
+  coupons.forEach(coupon => {
+    const tr = document.createElement('tr');
+    tr.className = 'hover:bg-surface-container-low transition-colors';
+
+    let typeBadge = '';
+    let discountText = '';
+    if (coupon.type === 'percent') {
+      typeBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Phần trăm</span>';
+      discountText = `<span class="font-black text-amber-700">${coupon.value}%</span> (Tối đa ${coupon.maxDiscount ? formatVNDOrder(coupon.maxDiscount) : 'Không giới hạn'})`;
+    } else if (coupon.type === 'fixed') {
+      typeBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Số tiền cố định</span>';
+      discountText = `<span class="font-black text-emerald-700">${formatVNDOrder(coupon.value)}</span>`;
+    } else if (coupon.type === 'freeship') {
+      typeBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-sky-100 text-sky-800">Miễn phí ship</span>';
+      discountText = `<span class="font-black text-sky-700">Tối đa ${formatVNDOrder(coupon.maxDiscount || coupon.value || 15000)}</span>`;
+    }
+
+    const minOrderText = coupon.minOrder > 0 ? formatVNDOrder(coupon.minOrder) : '0 đ';
+    const dateRange = (coupon.startDate || 'Ngay') + ' → ' + (coupon.endDate || 'Vô hạn');
+    const usage = `${coupon.usedCount || 0} / ${coupon.totalLimit > 0 ? coupon.totalLimit : '∞'}`;
+    const isActive = coupon.isActive !== false;
+
+    tr.innerHTML = `
+      <td class="p-4">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-primary text-[18px]">confirmation_number</span>
+          <div>
+            <span class="font-black text-primary font-mono text-xs tracking-wider">${escapeHtml(coupon.code)}</span>
+            <p class="text-[11px] text-secondary mt-0.5 line-clamp-1 max-w-xs">${escapeHtml(coupon.description || '')}</p>
+          </div>
+        </div>
+      </td>
+      <td class="p-4">
+        <div class="space-y-1">
+          ${typeBadge}
+          <div class="text-[11px]">${discountText}</div>
+        </div>
+      </td>
+      <td class="p-4">
+        <span class="font-bold text-on-surface">${minOrderText}</span>
+      </td>
+      <td class="p-4">
+        <span class="text-[11px] text-secondary">${dateRange}</span>
+      </td>
+      <td class="p-4">
+        <div class="text-xs font-semibold text-on-surface">${usage}</div>
+        <span class="text-[10px] text-secondary">Tối đa ${coupon.perUserLimit || 1} lần/khách</span>
+      </td>
+      <td class="p-4">
+        <button type="button" class="toggle-coupon-btn px-2.5 py-1 rounded-full text-[11px] font-bold transition-all cursor-pointer ${isActive ? 'bg-emerald-100 text-emerald-800 hover:bg-emerald-200' : 'bg-surface-container text-secondary hover:bg-surface-container-high'}" data-id="${coupon.id}">
+          ${isActive ? '● Đang bật' : '○ Tạm tắt'}
+        </button>
+      </td>
+      <td class="p-4 text-right">
+        <div class="inline-flex items-center gap-1">
+          <button type="button" class="edit-coupon-btn p-1.5 rounded-lg text-secondary hover:text-primary hover:bg-surface-container transition-colors cursor-pointer" title="Chỉnh sửa">
+            <span class="material-symbols-outlined text-[18px]">edit</span>
+          </button>
+          <button type="button" class="delete-coupon-btn p-1.5 rounded-lg text-secondary hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer" title="Xóa mã">
+            <span class="material-symbols-outlined text-[18px]">delete</span>
+          </button>
+        </div>
+      </td>
+    `;
+
+    // Bind toggle
+    tr.querySelector('.toggle-coupon-btn')?.addEventListener('click', () => {
+      toggleCouponStatus(coupon.id);
+    });
+
+    // Bind edit
+    tr.querySelector('.edit-coupon-btn')?.addEventListener('click', () => {
+      openCouponModal(coupon);
+    });
+
+    // Bind delete
+    tr.querySelector('.delete-coupon-btn')?.addEventListener('click', () => {
+      deleteCoupon(coupon.id, coupon.code);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+async function openCouponModal(coupon = null) {
+  const modal = document.getElementById('coupon-modal');
+  const title = document.getElementById('coupon-modal-title');
+  const form = document.getElementById('coupon-modal-form');
+  if (!modal || !form) return;
+
+  if (cachedRestaurants.length === 0) {
+    try {
+      const restRes = await api.get('/restaurants');
+      if (restRes && restRes.success && Array.isArray(restRes.data)) {
+        cachedRestaurants = restRes.data;
+      }
+    } catch (_) {}
+  }
+
+  // Populate restaurant scope dropdown
+  const scopeSelect = document.getElementById('modal-coupon-scope');
+  if (scopeSelect) {
+    scopeSelect.innerHTML = `<option value="all">Tất cả quán ăn</option>` +
+      cachedRestaurants.map(r => `<option value="${r.id}">${escapeHtml(r.name)}</option>`).join('');
+  }
+
+  if (coupon) {
+    title.textContent = `Chỉnh sửa mã: ${coupon.code}`;
+    document.getElementById('modal-coupon-id').value = coupon.id;
+    document.getElementById('modal-coupon-code').value = coupon.code;
+    document.getElementById('modal-coupon-type').value = coupon.type || 'percent';
+    document.getElementById('modal-coupon-value').value = coupon.value || 0;
+    document.getElementById('modal-coupon-max-discount').value = coupon.maxDiscount || 0;
+    document.getElementById('modal-coupon-min-order').value = coupon.minOrder || 0;
+    document.getElementById('modal-coupon-start-date').value = (coupon.startDate || '').slice(0, 10);
+    document.getElementById('modal-coupon-end-date').value = (coupon.endDate || '').slice(0, 10);
+    document.getElementById('modal-coupon-total-limit').value = coupon.totalLimit || 100;
+    document.getElementById('modal-coupon-user-limit').value = coupon.perUserLimit || 1;
+    document.getElementById('modal-coupon-desc').value = coupon.description || '';
+    if (scopeSelect) scopeSelect.value = coupon.scope || 'all';
+    document.getElementById('modal-coupon-is-active').checked = coupon.isActive !== false;
+  } else {
+    title.textContent = 'Thêm Mã Giảm Giá Mới';
+    form.reset();
+    document.getElementById('modal-coupon-id').value = '';
+    document.getElementById('modal-coupon-type').value = 'percent';
+    document.getElementById('modal-coupon-start-date').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('modal-coupon-total-limit').value = 100;
+    document.getElementById('modal-coupon-user-limit').value = 1;
+    document.getElementById('modal-coupon-is-active').checked = true;
+    if (scopeSelect) scopeSelect.value = 'all';
+  }
+
+  // Trigger change to update labels
+  document.getElementById('modal-coupon-type')?.dispatchEvent(new Event('change'));
+
+  modal.classList.remove('hidden');
+}
+
+function closeCouponModal() {
+  document.getElementById('coupon-modal')?.classList.add('hidden');
+}
+
+async function handleCouponFormSubmit(e) {
+  e.preventDefault();
+  const id = document.getElementById('modal-coupon-id').value;
+  const payload = {
+    code: document.getElementById('modal-coupon-code').value.trim().toUpperCase(),
+    type: document.getElementById('modal-coupon-type').value,
+    value: Number(document.getElementById('modal-coupon-value').value) || 0,
+    maxDiscount: Number(document.getElementById('modal-coupon-max-discount').value) || 0,
+    minOrder: Number(document.getElementById('modal-coupon-min-order').value) || 0,
+    startDate: document.getElementById('modal-coupon-start-date').value,
+    endDate: document.getElementById('modal-coupon-end-date').value,
+    totalLimit: Number(document.getElementById('modal-coupon-total-limit').value) || 100,
+    perUserLimit: Number(document.getElementById('modal-coupon-user-limit').value) || 1,
+    scope: document.getElementById('modal-coupon-scope').value,
+    description: document.getElementById('modal-coupon-desc').value.trim(),
+    isActive: document.getElementById('modal-coupon-is-active').checked
+  };
+
+  try {
+    let res;
+    if (id) {
+      res = await api.put(`/coupons/admin/${id}`, payload);
+    } else {
+      res = await api.post('/coupons/admin', payload);
+    }
+
+    if (res && res.success) {
+      toast.success(res.message || 'Lưu mã giảm giá thành công!');
+      closeCouponModal();
+      await refreshCouponsData();
+    } else {
+      toast.error(res?.message || 'Không thể lưu mã giảm giá.');
+    }
+  } catch (err) {
+    console.error('Lỗi lưu coupon:', err);
+    toast.error(err.message || 'Lỗi khi lưu mã giảm giá.');
+  }
+}
+
+async function toggleCouponStatus(id) {
+  try {
+    const res = await api.patch(`/coupons/admin/${id}/status`, {});
+    if (res && res.success) {
+      toast.success(res.message || 'Đã cập nhật trạng thái mã.');
+      await refreshCouponsData();
+    } else {
+      toast.error(res?.message || 'Không thể đổi trạng thái mã.');
+    }
+  } catch (err) {
+    console.error('Lỗi đổi trạng thái coupon:', err);
+    toast.error(err.message || 'Lỗi khi đổi trạng thái mã.');
+  }
+}
+
+async function deleteCoupon(id, code) {
+  if (!confirm(`Bạn có chắc muốn xóa mã giảm giá "${code}"?`)) return;
+  try {
+    const res = await api.delete(`/coupons/admin/${id}`);
+    if (res && res.success) {
+      toast.success(res.message || 'Đã xóa mã giảm giá thành công.');
+      await refreshCouponsData();
+    } else {
+      toast.error(res?.message || 'Không thể xóa mã giảm giá.');
+    }
+  } catch (err) {
+    console.error('Lỗi xóa coupon:', err);
+    toast.error(err.message || 'Lỗi khi xóa mã giảm giá.');
+  }
+}
+

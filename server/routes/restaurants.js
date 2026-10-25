@@ -167,9 +167,8 @@ router.get('/:id', optionalAuth, (req, res) => {
       return res.status(404).json({ success: false, message: 'Không tìm thấy thông tin quán ăn.' });
     }
 
-    recalculateRestaurantRating(id);
-
-    const reviews = db.reviews.filter(r => r.restaurantId === id && r.status === 'approved')
+    // Hiển thị công khai tất cả đánh giá hợp lệ (không bị ẩn hoặc từ chối)
+    const reviews = db.reviews.filter(r => Number(r.restaurantId || r.restaurant_id) === id && r.status !== 'hidden' && r.status !== 'rejected')
       .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
 
     const related = db.restaurants

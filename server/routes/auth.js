@@ -30,8 +30,9 @@ router.post('/register', async (req, res) => {
       return res.status(400).json({ success: false, message: 'Định dạng email không hợp lệ.' });
     }
 
-    if (phone && !/^(0|\+84)[0-9]{9}$/.test(phone.trim())) {
-      return res.status(400).json({ success: false, message: 'Số điện thoại không hợp lệ (cần 10 chữ số).' });
+    const VN_PHONE_REGEX = /^(?:\+?84|0)(3[2-9]|5[5-9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/;
+    if (phone && !VN_PHONE_REGEX.test(phone.trim())) {
+      return res.status(400).json({ success: false, message: 'Số điện thoại không đúng chuẩn di động Việt Nam (10 số, đầu 03, 05, 07, 08, 09).' });
     }
 
     if (!password || password.length < 6) {
@@ -284,6 +285,155 @@ router.post('/reset-password', async (req, res) => {
   } catch (error) {
     console.error('Lỗi reset mật khẩu:', error);
     res.status(500).json({ success: false, message: 'Lỗi khi đặt lại mật khẩu.' });
+  }
+});
+
+// 7. Lấy sổ địa chỉ của người dùng
+// GET /api/auth/addresses
+router.get('/addresses', authenticateToken, (req, res) => {
+  try {
+    const db = getDb();
+    const user = db.users.find(u => u.id === req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản.' });
+
+    res.json({
+      success: true,
+      data: Array.isArray(user.addresses) ? user.addresses : []
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi tải sổ địa chỉ.' });
+  }
+});
+
+// 8. Thêm hoặc cập nhật địa chỉ
+// POST /api/auth/addresses
+router.post('/addresses', authenticateToken, (req, res) => {
+  try {
+    const { id, recipientName, phone, province = 'Hà Nội', district, ward, street, isDefault = false } = req.body;
+
+    if (!recipientName || recipientName.trim().length < 2) {
+      return res.status(400).json({ success: false, message: 'Tên người nhận tối thiểu 2 ký tự.' });
+    }
+
+    const VN_PHONE_REGEX = /^(?:\+?84|0)(3[2-9]|5[5-9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/;
+    if (!phone || !VN_PHONE_REGEX.test(phone.trim())) {
+      return res.status(400).json({ success: false, message: 'Số điện thoại không đúng chuẩn di động Việt Nam (10 số).' });
+    }
+
+    if (!street || street.trim().length < 3) {
+      return res.status(400).json({ success: false, message: 'Vui lòng nhập số nhà, tên đường cụ thể.' });
+    }
+
+    const db = getDb();
+    const user = db.users.find(u => u.id === req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản.' });
+
+    if (!Array.isArray(user.addresses)) user.addresses = [];
+
+    // Chuẩn hóa địa chỉ đầy đủ
+    const addressParts = [street.trim(), ward ? ward.trim() : '', district ? district.trim() : '', province.trim()].filter(Boolean);
+    const fullAddress = addressParts.join(', ');
+
+    let cleanPhone = phone.trim().replace(/[\s.-]/g, '');
+    if (cleanPhone.startsWith('+84')) cleanPhone = '0' + cleanPhone.slice(3);
+
+    if (isDefault) {
+      user.addresses.forEach(a => a.isDefault = false);
+    }
+
+    let addr;
+    if (id) {
+      addr = user.addresses.find(a => Number(a.id) === Number(id));
+      if (addr) {
+        addr.recipientName = recipientName.trim();
+        addr.phone = cleanPhone;
+        addr.province = province.trim();
+        addr.district = (district || '').trim();
+        addr.ward = (ward || '').trim();
+        addr.street = street.trim();
+        addr.fullAddress = fullAddress;
+        addr.isDefault = Boolean(isDefault);
+        addr.updatedAt = new Date().toISOString();
+      }
+    }
+
+    if (!addr) {
+      const newId = user.addresses.length > 0 ? Math.max(...user.addresses.map(a => Number(a.id) || 0)) + 1 : 1;
+      addr = {
+        id: newId,
+        recipientName: recipientName.trim(),
+        phone: cleanPhone,
+        province: province.trim(),
+        district: (district || '').trim(),
+        ward: (ward || '').trim(),
+        street: street.trim(),
+        fullAddress,
+        isDefault: user.addresses.length === 0 ? true : Boolean(isDefault),
+        createdAt: new Date().toISOString()
+      };
+      user.addresses.push(addr);
+    }
+
+    saveDb();
+
+    res.json({
+      success: true,
+      message: 'Lưu địa chỉ thành công!',
+      data: addr,
+      addresses: user.addresses
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi lưu địa chỉ giao hàng.' });
+  }
+});
+
+// 9. Xóa địa chỉ
+// DELETE /api/auth/addresses/:id
+router.delete('/addresses/:id', authenticateToken, (req, res) => {
+  try {
+    const addrId = Number(req.params.id);
+    const db = getDb();
+    const user = db.users.find(u => u.id === req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản.' });
+
+    if (!Array.isArray(user.addresses)) user.addresses = [];
+    const index = user.addresses.findIndex(a => Number(a.id) === addrId);
+    if (index === -1) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy địa chỉ.' });
+    }
+
+    const wasDefault = user.addresses[index].isDefault;
+    user.addresses.splice(index, 1);
+    if (wasDefault && user.addresses.length > 0) {
+      user.addresses[0].isDefault = true;
+    }
+
+    saveDb();
+    res.json({ success: true, message: 'Đã xóa địa chỉ thành công.' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi khi xóa địa chỉ.' });
+  }
+});
+
+// 10. Đặt làm địa chỉ mặc định
+// PATCH /api/auth/addresses/:id/default
+router.patch('/addresses/:id/default', authenticateToken, (req, res) => {
+  try {
+    const addrId = Number(req.params.id);
+    const db = getDb();
+    const user = db.users.find(u => u.id === req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: 'Không tìm thấy tài khoản.' });
+
+    if (!Array.isArray(user.addresses)) user.addresses = [];
+    const target = user.addresses.find(a => Number(a.id) === addrId);
+    if (!target) return res.status(404).json({ success: false, message: 'Không tìm thấy địa chỉ.' });
+
+    user.addresses.forEach(a => a.isDefault = (Number(a.id) === addrId));
+    saveDb();
+
+    res.json({ success: true, message: 'Đã thiết lập địa chỉ mặc định.', data: target });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Lỗi thiết lập địa chỉ mặc định.' });
   }
 });
 

@@ -15,8 +15,8 @@ router.get('/restaurant/:restaurantId', optionalAuth, (req, res) => {
     return res.status(404).json({ success: false, message: 'Không tìm thấy quán ăn.' });
   }
 
-  // Chỉ hiển thị các đánh giá đã được duyệt (approved) công khai
-  let reviews = db.reviews.filter(r => r.restaurantId === restaurantId && r.status === 'approved');
+  // Hiển thị công khai tất cả đánh giá hợp lệ (không bị ẩn hoặc từ chối)
+  let reviews = db.reviews.filter(r => Number(r.restaurantId || r.restaurant_id) === restaurantId && r.status !== 'hidden' && r.status !== 'rejected');
 
   // Sắp xếp mới nhất lên trước
   reviews.sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date));
@@ -88,6 +88,22 @@ router.post('/', authenticateToken, (req, res) => {
   }
 
   // Mỗi lần gửi là một bình luận mới: không tìm/gộp/ghi đè bình luận cũ của người dùng.
+  // Chống spam: Chặn gửi liên tục nội dung y hệt nhau trong vòng 30 giây bởi cùng người dùng
+  const thirtySecondsAgo = new Date(Date.now() - 30 * 1000);
+  const isSpam = db.reviews.some(r =>
+    r.userId === req.user.id &&
+    r.restaurantId === restId &&
+    r.content.trim().toLowerCase() === content.trim().toLowerCase() &&
+    new Date(r.createdAt || r.date) > thirtySecondsAgo
+  );
+  if (isSpam) {
+    return res.status(429).json({
+      success: false,
+      spam: true,
+      message: 'Bạn vừa gửi đánh giá với nội dung này. Vui lòng chờ 30 giây trước khi gửi tiếp.'
+    });
+  }
+
   const newId = db.reviews.length > 0 ? Math.max(...db.reviews.map(r => Number(r.id) || 0)) + 1 : 1;
   const newReview = {
     id: newId,
@@ -98,7 +114,7 @@ router.post('/', authenticateToken, (req, res) => {
     rating: numRating,
     content: content.trim(),
     images: Array.isArray(images) ? images : [],
-    status: 'pending',
+    status: 'approved',
     date: new Date().toISOString().split('T')[0],
     createdAt: new Date().toISOString()
   };
@@ -109,7 +125,7 @@ router.post('/', authenticateToken, (req, res) => {
 
   res.status(201).json({
     success: true,
-    message: 'Gửi bình luận thành công! Bình luận của bạn đang chờ quản trị viên phê duyệt.',
+    message: 'Đánh giá của bạn đã được đăng thành công!',
     data: newReview
   });
 });
@@ -126,7 +142,7 @@ router.put('/:id', authenticateToken, (req, res) => {
     return res.status(404).json({ success: false, message: 'Không tìm thấy đánh giá.' });
   }
 
-  if (review.userId !== req.user.id && req.user.role !== 'admin') {
+  if (Number(review.userId) !== Number(req.user.id) && req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
       message: 'Bạn không có quyền chỉnh sửa đánh giá này.'
@@ -175,7 +191,7 @@ router.delete('/:id', authenticateToken, (req, res) => {
   }
 
   const review = db.reviews[index];
-  if (review.userId !== req.user.id && req.user.role !== 'admin') {
+  if (Number(review.userId) !== Number(req.user.id) && req.user.role !== 'admin') {
     return res.status(403).json({
       success: false,
       message: 'Bạn không có quyền xóa đánh giá này.'

@@ -9,6 +9,8 @@ let currentRestaurant = null;
 let selectedStar = 5;
 let isFav = false;
 let favoriteIds = [];
+let editingReviewId = null;
+let reviewModalController = null;
 
 const starLabels = {
   1: '1 sao - Rất tệ',
@@ -17,6 +19,15 @@ const starLabels = {
   4: '4 sao - Tốt',
   5: '5 sao - Tuyệt vời'
 };
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 // Chuyển chuỗi giá kiểu Việt Nam ("75.000đ", "10.000đ/cặp", "650.000đ/set")
 // thành số nguyên. Dấu chấm là phân cách hàng nghìn nên phải loại bỏ trước khi
@@ -165,7 +176,7 @@ async function initPage(restId) {
 
 async function loadRestaurantDetail(id) {
   try {
-    const res = await api.get(`/restaurants/${id}`);
+    const res = await api.get(`/restaurants/${id}?_t=${Date.now()}`);
     if (!res || !res.success || !res.data) {
       showErrorState({
         title: 'Quán ăn không tồn tại',
@@ -458,7 +469,20 @@ function renderMenu(menuItems) {
   }
 
   container.innerHTML = '';
-  menuItems.forEach(item => {
+  menuItems.forEach((item, idx) => {
+    // Đảm bảo item.id và item.priceNum luôn là số nguyên hợp lệ, không bao giờ là NaN
+    const rawId = item.id !== undefined ? item.id : (item.dishId !== undefined ? item.dishId : (item.foodId || item.menuItemId));
+    const validDishId = (rawId !== null && rawId !== undefined && !isNaN(Number(rawId)))
+      ? Number(rawId)
+      : (currentRestaurant ? (Number(currentRestaurant.id) * 100 + (idx + 1)) : (idx + 1));
+    item.id = validDishId;
+    item.dishId = validDishId;
+
+    const parsedPrice = parseInt(String(item.price || '').replace(/[^\d]/g, ''), 10);
+    if (!item.priceNum || item.priceNum <= 0) {
+      item.priceNum = parsedPrice > 0 ? parsedPrice : 35000;
+    }
+
     const el = document.createElement('div');
     const isOutOfStock = item.isAvailable === false;
     el.className = 'flex items-center gap-3 p-3.5 rounded-2xl bg-surface-container-low border border-surface-container-high hover:border-primary-container/40 hover:shadow-sm transition-all group';
@@ -534,7 +558,7 @@ function renderReviews(reviews) {
 
   list.innerHTML = '';
   reviews.forEach(rev => {
-    const isOwner = currentUser && (currentUser.id === rev.userId || currentUser.role === 'admin');
+    const isOwner = currentUser && (Number(currentUser.id) === Number(rev.userId) || currentUser.role === 'admin');
     const revEl = document.createElement('div');
     revEl.className = 'p-5 rounded-2xl bg-surface-container-low border border-surface-container-high transition-all flex flex-col gap-3';
     revEl.id = `review-${rev.id}`;
@@ -546,14 +570,15 @@ function renderReviews(reviews) {
       starsHtml += `<span class="material-symbols-outlined text-[16px] ${i <= ratingNum ? 'text-amber-500' : 'text-secondary/30'}" style="${i <= ratingNum ? "font-variation-settings: 'FILL' 1;" : ''}">star</span>`;
     }
 
-    const avatar = rev.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(rev.userName || 'U')}&background=ff6b35&color=fff`;
+    const reviewerName = rev.userName || rev.user_name || rev.name || 'Người dùng';
+    const avatar = rev.userAvatar || rev.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(reviewerName)}&background=ff6b35&color=fff`;
 
     revEl.innerHTML = `
       <div class="flex items-start justify-between gap-3">
         <div class="flex items-center gap-3">
-          <img src="${avatar}" alt="${rev.userName}" class="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20" />
+          <img src="${avatar}" alt="${escapeHtml(reviewerName)}" class="w-10 h-10 rounded-full object-cover ring-2 ring-primary/20" />
           <div>
-            <h4 class="text-xs font-bold text-on-surface">${rev.userName}</h4>
+            <h4 class="text-xs font-bold text-on-surface">${escapeHtml(reviewerName)}</h4>
             <div class="flex items-center gap-2 mt-0.5">
               <div class="flex items-center">${starsHtml}</div>
               <span class="text-[11px] text-secondary">• ${formatReviewTime(rev)}</span>
@@ -563,7 +588,10 @@ function renderReviews(reviews) {
 
         ${isOwner ? `
           <div class="flex items-center gap-1">
-            <button class="delete-rev-btn text-rose-500 hover:text-rose-700 text-xs font-semibold p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer" data-id="${rev.id}">
+            <button class="edit-rev-btn text-primary hover:text-primary-container text-xs font-semibold p-1.5 rounded-lg hover:bg-primary/10 transition-colors cursor-pointer" data-id="${rev.id}" title="Chỉnh sửa đánh giá của bạn">
+              <span class="material-symbols-outlined text-[18px]">edit</span>
+            </button>
+            <button class="delete-rev-btn text-rose-500 hover:text-rose-700 text-xs font-semibold p-1.5 rounded-lg hover:bg-rose-50 transition-colors cursor-pointer" data-id="${rev.id}" title="Xóa đánh giá của bạn">
               <span class="material-symbols-outlined text-[18px]">delete</span>
             </button>
           </div>
@@ -571,9 +599,17 @@ function renderReviews(reviews) {
       </div>
 
       <p class="text-xs text-on-surface-variant leading-relaxed pl-13">
-        ${rev.content}
+        ${escapeHtml(rev.content || rev.comment || '')}
       </p>
     `;
+
+    // Bind edit review
+    const editBtn = revEl.querySelector('.edit-rev-btn');
+    if (editBtn) {
+      editBtn.addEventListener('click', () => {
+        if (reviewModalController) reviewModalController.openForEdit(rev);
+      });
+    }
 
     // Bind delete review
     const delBtn = revEl.querySelector('.delete-rev-btn');
@@ -591,12 +627,20 @@ async function handleDeleteReview(reviewId) {
   try {
     const res = await api.delete(`/reviews/${reviewId}`);
     if (res && res.success) {
-      toast.success('Đã xóa đánh giá thành công.');
-      // Reload restaurant info to update stars & reviews list
+      toast.success(res.message || 'Đã xóa đánh giá thành công.');
+      // Cập nhật state in-memory ngay lập tức
+      if (currentRestaurant && Array.isArray(currentRestaurant.reviews)) {
+        currentRestaurant.reviews = currentRestaurant.reviews.filter(r => r.id !== Number(reviewId));
+        currentRestaurant.reviewsCount = currentRestaurant.reviews.length;
+        renderReviews(currentRestaurant.reviews);
+        const countEl = document.getElementById('rest-reviews-count');
+        if (countEl) countEl.textContent = `(${currentRestaurant.reviewsCount} nhận xét)`;
+      }
+      // Tải lại chi tiết quán từ backend để đồng bộ điểm số
       await loadRestaurantDetail(currentRestaurant.id);
     }
   } catch (err) {
-    toast.error('Lỗi khi xóa đánh giá.');
+    toast.error(err.message || 'Lỗi khi xóa đánh giá.');
   }
 }
 
@@ -642,8 +686,35 @@ function setupReviewModal(restId) {
     modal.classList.add('hidden');
   };
 
-  if (openBtn) openBtn.addEventListener('click', openModal);
-  if (openBtn2) openBtn2.addEventListener('click', openModal);
+  reviewModalController = {
+    openForCreate() {
+      editingReviewId = null;
+      const modalTitle = document.getElementById('modal-title');
+      if (modalTitle) modalTitle.textContent = 'Đánh giá quán ăn';
+      const submitBtn = document.getElementById('submit-review-btn');
+      if (submitBtn) submitBtn.textContent = 'Gửi nhận xét';
+      if (contentInput) contentInput.value = '';
+      updateStars(5);
+      openModal();
+    },
+    openForEdit(rev) {
+      if (!isLoggedIn()) {
+        toast.warning('Vui lòng đăng nhập để chỉnh sửa đánh giá.');
+        return;
+      }
+      editingReviewId = rev.id;
+      const modalTitle = document.getElementById('modal-title');
+      if (modalTitle) modalTitle.textContent = 'Chỉnh sửa đánh giá của bạn';
+      const submitBtn = document.getElementById('submit-review-btn');
+      if (submitBtn) submitBtn.textContent = 'Lưu thay đổi';
+      if (contentInput) contentInput.value = rev.content || '';
+      updateStars(Math.round(Number(rev.rating) || 5));
+      openModal();
+    }
+  };
+
+  if (openBtn) openBtn.addEventListener('click', () => reviewModalController.openForCreate());
+  if (openBtn2) openBtn2.addEventListener('click', () => reviewModalController.openForCreate());
   if (closeBtn) closeBtn.addEventListener('click', closeModal);
   if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
 
@@ -685,18 +756,58 @@ function setupReviewModal(restId) {
       }
 
       try {
-        const res = await api.post('/reviews', {
+        let res;
+        if (editingReviewId) {
+          res = await api.put(`/reviews/${editingReviewId}`, {
+            rating: selectedStar,
+            content
+          });
+          if (res && res.success) {
+            toast.success(res.message || 'Cập nhật đánh giá thành công!');
+            closeModal();
+            contentInput.value = '';
+            editingReviewId = null;
+
+            // Cập nhật state in-memory ngay lập tức
+            if (res.data && currentRestaurant && Array.isArray(currentRestaurant.reviews)) {
+              const idx = currentRestaurant.reviews.findIndex(r => r.id === res.data.id);
+              if (idx !== -1) {
+                currentRestaurant.reviews[idx] = res.data;
+              }
+              renderReviews(currentRestaurant.reviews);
+            }
+
+            await loadRestaurantDetail(restId);
+            return;
+          }
+        }
+        res = await api.post('/reviews', {
           restaurantId: Number(restId),
           rating: selectedStar,
           content
         });
 
         if (res && res.success) {
-          toast.success(res.message || 'Cảm ơn nhận xét của bạn!');
+          toast.success(res.message || 'Cảm ơn nhận xét của bạn! Đánh giá đã được hiển thị công khai.');
           closeModal();
           contentInput.value = '';
-          // Reload restaurant to see updated rating & review list
+
+          // 1. Cập nhật ngay lập tức danh sách in-memory và render ngay
+          if (res.data && currentRestaurant) {
+            if (!Array.isArray(currentRestaurant.reviews)) {
+              currentRestaurant.reviews = [];
+            }
+            currentRestaurant.reviews = currentRestaurant.reviews.filter(r => r.id !== res.data.id);
+            currentRestaurant.reviews.unshift(res.data);
+            currentRestaurant.reviewsCount = currentRestaurant.reviews.length;
+            renderReviews(currentRestaurant.reviews);
+            const countEl = document.getElementById('rest-reviews-count');
+            if (countEl) countEl.textContent = `(${currentRestaurant.reviewsCount} nhận xét)`;
+          }
+
+          // 2. Đồng bộ đầy đủ với backend
           await loadRestaurantDetail(restId);
+          document.getElementById('reviews-section')?.scrollIntoView({ behavior: 'smooth' });
         }
       } catch (err) {
         toast.error(err.message || 'Không thể gửi đánh giá.');
