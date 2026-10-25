@@ -20,7 +20,7 @@ async function request(endpoint, options = {}) {
     ...(options.headers || {})
   };
 
-  const token = localStorage.getItem('foodhub_token');
+  const token = sessionStorage.getItem('foodhub_token');
   if (token) {
     headers['Authorization'] = `Bearer ${token}`;
   }
@@ -53,8 +53,10 @@ async function request(endpoint, options = {}) {
     
     // Nếu token hết hạn hoặc không hợp lệ khi đang có token
     if (response.status === 401 && token) {
-      localStorage.removeItem('foodhub_token');
-      localStorage.removeItem('foodhub_user');
+      sessionStorage.removeItem('foodhub_token');
+      sessionStorage.removeItem('foodhub_user');
+      try { localStorage.removeItem('foodhub_token'); } catch (_) {}
+      try { localStorage.removeItem('foodhub_user'); } catch (_) {}
       toast.warning('Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.');
       setTimeout(() => {
         if (!window.location.pathname.includes('login.html')) {

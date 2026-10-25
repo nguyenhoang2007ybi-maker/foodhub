@@ -4,20 +4,23 @@ import { toast } from './toast.js';
 import { updateCartBadge, loadCartFromServer } from './cart.js';
 
 export function getToken() {
-  return localStorage.getItem('foodhub_token');
+  return sessionStorage.getItem('foodhub_token');
 }
 
 export function setToken(token) {
-  localStorage.setItem('foodhub_token', token);
+  sessionStorage.setItem('foodhub_token', token);
+  // Dọn dẹp token dùng chung trong localStorage để ngăn chặn ghi đè phiên giữa các tab
+  try { localStorage.removeItem('foodhub_token'); } catch (_) {}
 }
 
 export function removeToken() {
-  localStorage.removeItem('foodhub_token');
+  sessionStorage.removeItem('foodhub_token');
+  try { localStorage.removeItem('foodhub_token'); } catch (_) {}
 }
 
 export function getUser() {
   try {
-    const raw = localStorage.getItem('foodhub_user');
+    const raw = sessionStorage.getItem('foodhub_user');
     return raw ? JSON.parse(raw) : null;
   } catch (e) {
     return null;
@@ -25,11 +28,14 @@ export function getUser() {
 }
 
 export function setUser(user) {
-  localStorage.setItem('foodhub_user', JSON.stringify(user));
+  sessionStorage.setItem('foodhub_user', JSON.stringify(user));
+  // Dọn dẹp user dùng chung trong localStorage để ngăn chặn ghi đè phiên giữa các tab
+  try { localStorage.removeItem('foodhub_user'); } catch (_) {}
 }
 
 export function removeUser() {
-  localStorage.removeItem('foodhub_user');
+  sessionStorage.removeItem('foodhub_user');
+  try { localStorage.removeItem('foodhub_user'); } catch (_) {}
 }
 
 export function isLoggedIn() {

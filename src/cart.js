@@ -13,7 +13,7 @@ export function getCartKey() {
 export function getCart() {
   try {
     const key = getCartKey();
-    const raw = localStorage.getItem(key);
+    const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
     if (!raw) {
       return {
         restaurantId: null,
@@ -63,6 +63,7 @@ export function getCart() {
 export function saveCart(cart, syncServer = true) {
   try {
     const key = getCartKey();
+    sessionStorage.setItem(key, JSON.stringify(cart));
     localStorage.setItem(key, JSON.stringify(cart));
     updateCartBadge();
 
