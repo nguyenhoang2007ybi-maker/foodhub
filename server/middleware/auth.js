@@ -33,7 +33,10 @@ export function authenticateToken(req, res, next) {
       email: user.email,
       phone: user.phone,
       role: user.role,
-      avatar: user.avatar
+      avatar: user.avatar,
+      restaurantId: user.restaurantId,
+      restaurantIds: user.restaurantIds,
+      managedRestaurantIds: user.managedRestaurantIds
     };
     next();
   });
@@ -59,7 +62,10 @@ export function optionalAuth(req, res, next) {
           email: user.email,
           phone: user.phone,
           role: user.role,
-          avatar: user.avatar
+          avatar: user.avatar,
+          restaurantId: user.restaurantId,
+          restaurantIds: user.restaurantIds,
+          managedRestaurantIds: user.managedRestaurantIds
         };
       }
     }

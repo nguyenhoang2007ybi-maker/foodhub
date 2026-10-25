@@ -26,6 +26,7 @@ export default defineConfig({
         favorites: resolve(__dirname, 'favorites.html'),
         profile: resolve(__dirname, 'profile.html'),
         admin: resolve(__dirname, 'admin.html'),
+        restaurant: resolve(__dirname, 'restaurant.html'),
         cart: resolve(__dirname, 'cart.html'),
         cartDetail: resolve(__dirname, 'cart-detail.html')
       }

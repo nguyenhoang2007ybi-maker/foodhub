@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản Lý Đơn Hàng Quán - FoodHub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            primary: "#ab3500",
+            "primary-container": "#ff6b35",
+            "on-primary": "#ffffff",
+            surface: "#f8fafc",
+            "on-surface": "#0f172a",
+            secondary: "#64748b",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-low": "#f1f5f9",
+            "surface-container": "#e2e8f0",
+            "surface-container-high": "#cbd5e1"
+          },
+          fontFamily: { sans: ["Inter", "sans-serif"] }
+        }
+      }
+    };
+  </script>
+</head>
+<body class="bg-surface font-sans text-on-surface antialiased min-h-screen flex flex-col">
+  <header></header>
+
+  <main class="flex-1 w-full max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-6">
+      <div>
+        <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-black uppercase tracking-wider mb-3">
+          <span class="material-symbols-outlined text-[14px]">storefront</span>
+          Khu vực chủ quán
+        </div>
+        <h1 class="text-2xl sm:text-3xl font-black tracking-tight">Quản lý đơn hàng của quán</h1>
+        <p id="restaurant-page-subtitle" class="text-sm text-secondary mt-1">Đang tải thông tin quán...</p>
+      </div>
+      <button id="restaurant-refresh-btn" type="button" class="self-start sm:self-auto inline-flex items-center gap-2 h-10 px-4 rounded-full bg-surface-container-lowest border border-surface-container-high text-sm font-bold text-on-surface hover:border-primary-container hover:text-primary transition-colors">
+        <span class="material-symbols-outlined text-[19px]">refresh</span>
+        <span>Làm mới</span>
+      </button>
+    </div>
+
+    <div id="restaurant-summary" class="hidden grid-cols-2 lg:grid-cols-4 gap-3 mb-6"></div>
+
+    <div id="restaurant-alert" class="hidden mb-6 rounded-2xl border border-rose-200 bg-rose-50 text-rose-800 px-4 py-3 text-sm font-semibold"></div>
+
+    <div id="restaurant-loading" class="flex flex-col items-center justify-center py-20 text-secondary">
+      <span class="material-symbols-outlined text-[42px] animate-spin text-primary-container">progress_activity</span>
+      <p class="mt-3 text-sm font-semibold">Đang tải đơn hàng...</p>
+    </div>
+
+    <div id="restaurant-orders" class="space-y-4"></div>
+
+    <div id="restaurant-empty" class="hidden text-center py-20 bg-surface-container-lowest border border-dashed border-surface-container-high rounded-3xl">
+      <span class="material-symbols-outlined text-[54px] text-secondary/50">receipt_long</span>
+      <h2 class="mt-3 text-lg font-bold">Chưa có đơn hàng nào</h2>
+      <p class="text-sm text-secondary mt-1">Đơn mới từ khách hàng sẽ xuất hiện tại đây.</p>
+    </div>
+  </main>
+
+  <footer></footer>
+
+  <div id="restaurant-cancel-modal" class="fixed inset-0 z-[100] hidden">
+    <div class="absolute inset-0 bg-slate-950/50 backdrop-blur-sm" data-restaurant-cancel-close></div>
+    <div class="absolute inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4">
+      <div class="relative w-full sm:max-w-lg bg-surface-container-lowest rounded-t-3xl sm:rounded-3xl shadow-2xl border border-surface-container-high p-5 sm:p-6 max-h-[92vh] overflow-y-auto">
+        <div class="flex items-start justify-between gap-4 mb-5">
+          <div>
+            <p class="text-[11px] font-black uppercase tracking-wider text-rose-600">Hủy đơn hàng</p>
+            <h2 class="text-xl font-black mt-1">Xác nhận hủy đơn</h2>
+            <p class="text-xs text-secondary mt-1">Mã đơn: <span id="restaurant-cancel-code" class="font-bold text-on-surface"></span></p>
+          </div>
+          <button type="button" data-restaurant-cancel-close class="w-9 h-9 rounded-full bg-surface-container-low text-secondary hover:text-on-surface flex items-center justify-center transition-colors">
+            <span class="material-symbols-outlined text-[20px]">close</span>
+          </button>
+        </div>
+
+        <div id="restaurant-cancel-error" class="hidden mb-4 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 px-3 py-2.5 text-xs font-semibold"></div>
+
+        <form id="restaurant-cancel-form" class="space-y-4">
+          <label class="block">
+            <span class="text-xs font-bold text-on-surface">Lý do hủy <span class="text-rose-600">*</span></span>
+            <select id="restaurant-cancel-reason" class="mt-1.5 w-full h-11 px-3 rounded-xl border border-surface-container-high bg-surface-container-lowest text-sm focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20" required>
+              <option value="">Chọn lý do hủy đơn</option>
+            </select>
+          </label>
+
+          <label class="block">
+            <span class="text-xs font-bold text-on-surface">Ghi chú bổ sung <span id="restaurant-cancel-note-hint" class="font-medium text-secondary"></span></span>
+            <textarea id="restaurant-cancel-note" rows="3" maxlength="500" class="mt-1.5 w-full px-3 py-2.5 rounded-xl border border-surface-container-high bg-surface-container-lowest text-sm resize-none focus:outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20" placeholder="Thông tin thêm cho khách hàng hoặc bộ phận hỗ trợ..."></textarea>
+          </label>
+
+          <div class="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-xs text-amber-900 leading-relaxed">
+            Sau khi hủy, đơn hàng không thể khôi phục. Khách hàng sẽ thấy lý do hủy trong chi tiết đơn.
+          </div>
+
+          <div class="flex items-center gap-2 pt-1">
+            <button type="button" data-restaurant-cancel-close class="flex-1 h-11 rounded-xl bg-surface-container-low text-on-surface font-bold text-sm hover:bg-surface-container transition-colors">Đóng</button>
+            <button id="restaurant-cancel-submit" type="submit" class="flex-1 h-11 rounded-xl bg-rose-600 text-white font-bold text-sm hover:bg-rose-700 disabled:opacity-60 disabled:cursor-not-allowed transition-colors">Xác nhận hủy</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="/src/restaurantOrders.js"></script>
+</body>
+</html>
