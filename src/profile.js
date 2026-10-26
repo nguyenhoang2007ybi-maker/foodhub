@@ -18,15 +18,18 @@ function setupTabs() {
   const tabInfoBtn = document.getElementById('tab-info-btn');
   const tabPasswordBtn = document.getElementById('tab-password-btn');
   const tabMyReviewsBtn = document.getElementById('tab-my-reviews-btn');
+  const tabAddressesBtn = document.getElementById('tab-addresses-btn');
 
   const panelInfo = document.getElementById('panel-info');
   const panelPassword = document.getElementById('panel-password');
   const panelMyReviews = document.getElementById('panel-my-reviews');
+  const panelAddresses = document.getElementById('panel-addresses');
 
   const tabs = [
     { btn: tabInfoBtn, panel: panelInfo },
     { btn: tabPasswordBtn, panel: panelPassword },
-    { btn: tabMyReviewsBtn, panel: panelMyReviews, onLoad: loadMyReviews }
+    { btn: tabMyReviewsBtn, panel: panelMyReviews, onLoad: loadMyReviews },
+    { btn: tabAddressesBtn, panel: panelAddresses, onLoad: loadUserAddresses }
   ];
 
   tabs.forEach(({ btn, panel, onLoad }) => {
@@ -88,7 +91,7 @@ async function loadUserData() {
       if (editAvatar) editAvatar.value = user.avatar || '';
     }
   } catch (err) {
-    console.error('Lỗi nạp thông tin user:', err);
+    console.error('Lỗi nạp thông tin user: - profile.js:94', err);
   }
 }
 
@@ -200,14 +203,12 @@ async function loadMyReviews() {
         }
 
         let statusBadge = '';
-        if (rev.status === 'approved') {
-          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Đã duyệt</span>';
-        } else if (rev.status === 'pending') {
-          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-800">Chờ duyệt</span>';
-        } else if (rev.status === 'rejected') {
+        if (rev.status === 'rejected') {
           statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-800">Từ chối</span>';
-        } else {
+        } else if (rev.status === 'hidden') {
           statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-700">Đã ẩn</span>';
+        } else {
+          statusBadge = '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">Công khai</span>';
         }
 
         item.innerHTML = `
@@ -245,8 +246,195 @@ async function loadMyReviews() {
       });
     }
   } catch (err) {
-    console.error('Lỗi nạp đánh giá cá nhân:', err);
+    console.error('Lỗi nạp đánh giá cá nhân: - profile.js:249', err);
     container.innerHTML = `<div class="text-rose-500 text-xs py-4 text-center">Không thể nạp danh sách đánh giá.</div>`;
   }
+}
+
+// 4. Quản lý sổ địa chỉ giao hàng
+async function loadUserAddresses() {
+  const container = document.getElementById('addresses-list-container');
+  if (!container) return;
+
+  try {
+    const res = await api.get('/auth/addresses');
+    if (res && res.success && Array.isArray(res.data)) {
+      renderAddressesList(res.data);
+    }
+  } catch (err) {
+    console.error('Lỗi nạp sổ địa chỉ: - profile.js:265', err);
+    container.innerHTML = '<div class="text-rose-500 text-xs py-4 text-center">Không thể tải sổ địa chỉ.</div>';
+  }
+
+  setupAddressModal();
+}
+
+function renderAddressesList(addresses) {
+  const container = document.getElementById('addresses-list-container');
+  if (!container) return;
+
+  if (addresses.length === 0) {
+    container.innerHTML = `
+      <div class="p-8 text-center text-secondary text-xs bg-surface-container-low rounded-2xl">
+        <span class="material-symbols-outlined text-3xl mb-1 text-secondary/40">home_pin</span>
+        <p>Bạn chưa lưu địa chỉ nhận hàng nào. Thêm địa chỉ để đặt món nhanh hơn!</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = '';
+  addresses.forEach(addr => {
+    const card = document.createElement('div');
+    card.className = 'p-4 rounded-2xl bg-surface-container-low border border-surface-container-high flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs';
+
+    card.innerHTML = `
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <strong class="text-on-surface font-bold">${addr.recipientName}</strong>
+          <span class="text-secondary">• ${addr.phone}</span>
+          ${addr.isDefault ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary text-white">Mặc định</span>' : ''}
+        </div>
+        <p class="text-secondary leading-relaxed">${addr.fullAddress}</p>
+      </div>
+
+      <div class="flex items-center gap-2 self-end sm:self-auto flex-shrink-0">
+        ${!addr.isDefault ? `
+          <button type="button" class="set-default-btn text-primary hover:underline text-[11px] font-semibold p-1 cursor-pointer" data-id="${addr.id}">
+            Đặt mặc định
+          </button>
+        ` : ''}
+        <button type="button" class="edit-addr-btn text-secondary hover:text-primary p-1 rounded hover:bg-surface-container-high transition-colors cursor-pointer" data-id="${addr.id}">
+          <span class="material-symbols-outlined text-[18px]">edit</span>
+        </button>
+        <button type="button" class="del-addr-btn text-rose-500 hover:text-rose-700 p-1 rounded hover:bg-rose-50 transition-colors cursor-pointer" data-id="${addr.id}">
+          <span class="material-symbols-outlined text-[18px]">delete</span>
+        </button>
+      </div>
+    `;
+
+    // Bind set default
+    card.querySelector('.set-default-btn')?.addEventListener('click', async () => {
+      try {
+        await api.patch(`/auth/addresses/${addr.id}/default`);
+        toast.success('Đã đặt làm địa chỉ mặc định!');
+        await loadUserAddresses();
+      } catch (e) {
+        toast.error('Lỗi thiết lập mặc định.');
+      }
+    });
+
+    // Bind edit
+    card.querySelector('.edit-addr-btn')?.addEventListener('click', () => {
+      openAddressModal(addr);
+    });
+
+    // Bind delete
+    card.querySelector('.del-addr-btn')?.addEventListener('click', async () => {
+      if (!confirm('Bạn có chắc muốn xóa địa chỉ này?')) return;
+      try {
+        await api.delete(`/auth/addresses/${addr.id}`);
+        toast.success('Đã xóa địa chỉ.');
+        await loadUserAddresses();
+      } catch (e) {
+        toast.error('Lỗi khi xóa địa chỉ.');
+      }
+    });
+
+    container.appendChild(card);
+  });
+}
+
+function openAddressModal(addr = null) {
+  const modal = document.getElementById('address-modal');
+  const title = document.getElementById('address-modal-title');
+  const idInput = document.getElementById('modal-address-id');
+  const nameInput = document.getElementById('addr-modal-name');
+  const phoneInput = document.getElementById('addr-modal-phone');
+  const districtSelect = document.getElementById('addr-modal-district');
+  const wardInput = document.getElementById('addr-modal-ward');
+  const streetInput = document.getElementById('addr-modal-street');
+  const defaultCheckbox = document.getElementById('addr-modal-default');
+
+  if (addr) {
+    if (title) title.textContent = 'Chỉnh sửa địa chỉ nhận hàng';
+    if (idInput) idInput.value = addr.id;
+    if (nameInput) nameInput.value = addr.recipientName;
+    if (phoneInput) phoneInput.value = addr.phone;
+    if (districtSelect) districtSelect.value = addr.district || '';
+    if (wardInput) wardInput.value = addr.ward || '';
+    if (streetInput) streetInput.value = addr.street || '';
+    if (defaultCheckbox) defaultCheckbox.checked = Boolean(addr.isDefault);
+  } else {
+    if (title) title.textContent = 'Thêm địa chỉ nhận hàng';
+    if (idInput) idInput.value = '';
+    const user = getUser();
+    if (nameInput) nameInput.value = user?.name || '';
+    if (phoneInput) phoneInput.value = user?.phone || '';
+    if (districtSelect) districtSelect.value = '';
+    if (wardInput) wardInput.value = '';
+    if (streetInput) streetInput.value = '';
+    if (defaultCheckbox) defaultCheckbox.checked = false;
+  }
+
+  modal?.classList.remove('hidden');
+}
+
+let addressModalInitialized = false;
+function setupAddressModal() {
+  if (addressModalInitialized) return;
+  addressModalInitialized = true;
+
+  const modal = document.getElementById('address-modal');
+  const openBtn = document.getElementById('open-add-address-btn');
+  const closeBtn = document.getElementById('close-address-modal-btn');
+  const cancelBtn = document.getElementById('cancel-addr-modal-btn');
+  const form = document.getElementById('address-form');
+
+  const closeModal = () => modal?.classList.add('hidden');
+
+  openBtn?.addEventListener('click', () => openAddressModal(null));
+  closeBtn?.addEventListener('click', closeModal);
+  cancelBtn?.addEventListener('click', closeModal);
+
+  form?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const id = document.getElementById('modal-address-id')?.value;
+    const recipientName = document.getElementById('addr-modal-name')?.value.trim();
+    const phone = document.getElementById('addr-modal-phone')?.value.trim();
+    const province = document.getElementById('addr-modal-province')?.value.trim() || 'Hà Nội';
+    const district = document.getElementById('addr-modal-district')?.value.trim();
+    const ward = document.getElementById('addr-modal-ward')?.value.trim();
+    const street = document.getElementById('addr-modal-street')?.value.trim();
+    const isDefault = document.getElementById('addr-modal-default')?.checked;
+
+    const VN_PHONE_REGEX = /^(?:\+?84|0)(3[2-9]|5[5-9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/;
+    if (!VN_PHONE_REGEX.test(phone)) {
+      toast.error('Số điện thoại không đúng chuẩn di động Việt Nam (10 số, đầu 03x, 05x, 07x, 08x, 09x).');
+      return;
+    }
+
+    try {
+      const res = await api.post('/auth/addresses', {
+        id: id ? Number(id) : undefined,
+        recipientName,
+        phone,
+        province,
+        district,
+        ward,
+        street,
+        isDefault
+      });
+
+      if (res && res.success) {
+        toast.success(res.message || 'Lưu địa chỉ thành công!');
+        closeModal();
+        await loadUserAddresses();
+      }
+    } catch (err) {
+      toast.error(err.message || 'Lỗi khi lưu địa chỉ.');
+    }
+  });
 }
 

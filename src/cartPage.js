@@ -13,7 +13,7 @@ import {
   calculateOrderSummary,
   formatVND,
   updateCartBadge,
-  validateCartAgainstRestaurant
+  healCart
 } from './cart.js';
 import {
   CUSTOMER_CANCEL_REASONS,
@@ -26,12 +26,6 @@ let pendingCancelOrderId = null;
 let pendingCancelOrderStatus = null;
 const invalidCartItems = new Map();
 
-const COUPONS = {
-  FOODHUB10: { code: 'FOODHUB10', type: 'percent', value: 10, max: 50000, description: 'Giảm 10% tối đa 50k' },
-  FREESHIP: { code: 'FREESHIP', type: 'freeship', description: 'Miễn phí giao hàng 15k' },
-  BANMOI: { code: 'BANMOI', type: 'fixed', value: 20000, minOrder: 50000, description: 'Giảm 20k cho đơn từ 50k' }
-};
-
 const STATUS_MAP = {
   pending: { label: 'Chờ xác nhận', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: 'schedule' },
   confirmed: { label: 'Đã xác nhận', color: 'bg-sky-100 text-sky-800 border-sky-300', icon: 'thumb_up' },
@@ -41,32 +35,12 @@ const STATUS_MAP = {
   cancelled: { label: 'Đã hủy', color: 'bg-rose-100 text-rose-800 border-rose-300', icon: 'cancel' }
 };
 
-function renderCancellationDetails(order) {
-  const info = getOrderCancellation(order);
-  if (!info) return '';
-
-  const actorName = info.byName ? ` (${escapeHtml(info.byName)})` : '';
-  return `
-    <div class="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-xs space-y-1.5">
-      <p class="font-bold text-rose-800 flex items-center gap-1.5">
-        <span class="material-symbols-outlined text-[16px]">info</span>
-        Thông tin hủy đơn
-      </p>
-      <p class="text-rose-900"><span class="font-semibold">Người hủy:</span> ${escapeHtml(info.actorLabel)}${actorName}</p>
-      <p class="text-rose-900"><span class="font-semibold">Lý do:</span> ${escapeHtml(info.reason || 'Không có thông tin')}</p>
-      ${info.note ? `<p class="text-rose-900"><span class="font-semibold">Ghi chú:</span> ${escapeHtml(info.note)}</p>` : ''}
-      <p class="text-rose-900"><span class="font-semibold">Thời gian hủy:</span> ${formatDateTime(info.at)}</p>
-    </div>
-  `;
-}
-
-document.addEventListener('DOMContentLoaded', () => {
-  window.addEventListener('foodhub:cart-synced', () => {
-    refreshCartValidation();
-  });
-
+document.addEventListener('DOMContentLoaded', async () => {
   initHeader('cart');
   initFooter();
+
+  // Tự động phân giải ID cho giỏ hàng cũ nếu có
+  await healCart();
 
   setupTabs();
   setupCartView();
@@ -106,7 +80,10 @@ function setupTabs() {
   const btnOrders = document.getElementById('tab-btn-orders');
 
   btnCart?.addEventListener('click', () => switchTab('cart'));
-  btnOrders?.addEventListener('click', () => switchTab('orders'));
+  btnOrders?.addEventListener('click', (e) => {
+    e.preventDefault();
+    window.location.href = '/order-tracking.html';
+  });
 
   document.getElementById('refresh-orders-btn')?.addEventListener('click', () => {
     loadMyOrders();
@@ -190,101 +167,128 @@ function setupCartView() {
     applyCouponCode(code);
   });
 
+  couponInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = (couponInput.value || '').trim().toUpperCase();
+      applyCouponCode(code);
+    }
+  });
+
   removeCouponBtn?.addEventListener('click', () => {
     appliedCoupon = null;
-    clearAppliedCoupon();
+    sessionStorage.removeItem('foodhub_pending_coupon');
     if (couponInput) couponInput.value = '';
     document.getElementById('applied-coupon-badge')?.classList.add('hidden');
     toast.info('Đã gỡ mã ưu đãi.');
     renderSummary();
   });
 
-  // Fast coupon pills
-  document.querySelectorAll('.coupon-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      const code = pill.dataset.code;
-      if (couponInput) couponInput.value = code;
-      applyCouponCode(code);
-    });
-  });
-}
-
-// Thiết lập Modal xác nhận xóa 1 món
-function setupItemDeleteModal() {
-  const modal = document.getElementById('delete-item-modal');
-  const cancelBtn = document.getElementById('cancel-delete-item-btn');
-  const confirmBtn = document.getElementById('confirm-delete-item-btn');
-
-  cancelBtn?.addEventListener('click', () => {
-    modal?.classList.add('hidden');
-    pendingDeleteItem = null;
-  });
-
-  confirmBtn?.addEventListener('click', () => {
-    if (pendingDeleteItem) {
-      removeItem(pendingDeleteItem.dishId);
-      toast.info(`Đã xóa "${pendingDeleteItem.name}" khỏi giỏ hàng.`);
-      pendingDeleteItem = null;
-      renderCart();
+  // Proceed to Checkout button
+  document.getElementById('proceed-to-checkout-btn')?.addEventListener('click', (e) => {
+    const cart = getCart();
+    if (!cart || !Array.isArray(cart.items) || cart.items.length === 0) {
+      e.preventDefault();
+      toast.warning('Giỏ hàng của bạn đang trống.');
+      return;
     }
-    modal?.classList.add('hidden');
-  });
-
-  modal?.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.classList.add('hidden');
-      pendingDeleteItem = null;
+    if (!isLoggedIn()) {
+      e.preventDefault();
+      toast.warning('Vui lòng đăng nhập để tiến hành đặt hàng.');
+      setTimeout(() => {
+        window.location.href = `/login.html?returnUrl=%2Fcheckout.html`;
+      }, 800);
     }
   });
-}
 
-function confirmDeleteItem(item) {
-  pendingDeleteItem = item;
-  const modal = document.getElementById('delete-item-modal');
-  const nameEl = document.getElementById('delete-item-name');
-  if (nameEl) nameEl.textContent = `"${item.name}"`;
+  // Load dynamic suggestion pills and bind clicks
+  loadPublicCouponPills();
 
-  if (modal) {
-    modal.classList.remove('hidden');
-  } else {
-    // Fallback phòng khi modal HTML chưa sẵn sàng
-    if (window.confirm(`Bạn có chắc chắn muốn xóa món "${item.name}" khỏi giỏ hàng không?`)) {
-      removeItem(item.dishId);
-      toast.info(`Đã xóa "${item.name}" khỏi giỏ hàng.`);
-      renderCart();
-    }
+  // Khôi phục mã giảm giá đã lưu nếu có
+  const savedPendingCoupon = sessionStorage.getItem('foodhub_pending_coupon');
+  if (savedPendingCoupon && getCartSubtotal() > 0) {
+    if (couponInput) couponInput.value = savedPendingCoupon;
+    applyCouponCode(savedPendingCoupon);
   }
 }
 
-function applyCouponCode(code) {
-  if (!code) {
+async function loadPublicCouponPills() {
+  const container = document.getElementById('cart-coupon-pills');
+  const couponInput = document.getElementById('coupon-input');
+
+  const bindPills = (root) => {
+    root.querySelectorAll('.coupon-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const code = pill.dataset.code;
+        if (couponInput) couponInput.value = code;
+        applyCouponCode(code);
+      });
+    });
+  };
+
+  // Bind initial static pills first
+  if (container) {
+    bindPills(container);
+  }
+
+  try {
+    const res = await api.get('/coupons/public');
+    if (res && res.success && Array.isArray(res.data) && res.data.length > 0 && container) {
+      container.innerHTML = `<span class="text-[11px] text-secondary">Gợi ý:</span>` +
+        res.data.slice(0, 5).map(c => {
+          let label = c.code;
+          if (c.type === 'percent') label += ` (-${c.value}%)`;
+          else if (c.type === 'fixed') label += ` (-${Math.round(c.value / 1000)}k)`;
+          else if (c.type === 'freeship') label += ` (Freeship)`;
+          return `<button type="button" class="coupon-pill text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-container-high hover:bg-primary-container hover:text-white transition-colors cursor-pointer" data-code="${c.code}">${label}</button>`;
+        }).join('');
+
+      bindPills(container);
+    }
+  } catch (_) {}
+}
+
+async function applyCouponCode(code) {
+  const cleanCode = (code || '').trim().toUpperCase();
+  if (!cleanCode) {
     toast.warning('Vui lòng nhập mã ưu đãi.');
     return;
   }
 
-  const coupon = COUPONS[code];
-  if (!coupon) {
-    toast.error('Mã giảm giá không tồn tại hoặc đã hết hạn.');
-    return;
-  }
-
   const subtotal = getCartSubtotal();
-  if (coupon.type === 'fixed' && coupon.minOrder && subtotal < coupon.minOrder) {
-    toast.warning(`Mã ${code} chỉ áp dụng cho đơn hàng từ ${formatVND(coupon.minOrder)}.`);
-    return;
-  }
+  const cart = getCart();
 
-  appliedCoupon = coupon;
-  setAppliedCoupon(coupon);
-  const badge = document.getElementById('applied-coupon-badge');
-  const badgeText = document.getElementById('applied-coupon-text');
-  if (badge && badgeText) {
-    badgeText.textContent = `Đã áp dụng mã: ${coupon.code} (${coupon.description})`;
-    badge.classList.remove('hidden');
-  }
+  try {
+    const res = await api.post('/coupons/validate', {
+      code: cleanCode,
+      subtotal,
+      restaurantId: cart.restaurantId
+    });
 
-  toast.success(`Áp dụng thành công mã ưu đãi "${coupon.code}"!`);
-  renderSummary();
+    if (res && res.valid) {
+      appliedCoupon = res.coupon;
+      sessionStorage.setItem('foodhub_pending_coupon', cleanCode);
+
+      const badge = document.getElementById('applied-coupon-badge');
+      const badgeText = document.getElementById('applied-coupon-text');
+      const couponInput = document.getElementById('coupon-input');
+
+      if (couponInput) couponInput.value = cleanCode;
+      const discount = Number(res.discount) || 0;
+      if (badge && badgeText) {
+        badgeText.textContent = `Đã áp dụng mã: ${appliedCoupon.code} (-${formatVND(discount)})`;
+        badge.classList.remove('hidden');
+      }
+
+      toast.success(res.message || `Áp dụng thành công mã ưu đãi "${appliedCoupon.code}"!`);
+      renderSummary();
+    } else {
+      toast.error(res?.message || 'Mã giảm giá không hợp lệ.');
+    }
+  } catch (err) {
+    console.error('Lỗi kiểm tra mã giảm giá:', err);
+    toast.error(err.message || 'Mã giảm giá không tồn tại hoặc đã hết hạn.');
+  }
 }
 
 function findCartItem(cart, dishId) {
@@ -554,6 +558,42 @@ function renderCart() {
         </div>
       `;
 
+      // Event listeners for item
+      const itemKey = (item.dishId !== null && item.dishId !== undefined && !isNaN(Number(item.dishId)) && Number(item.dishId) > 0)
+        ? Number(item.dishId)
+        : (item.name || item.id);
+
+      itemEl.querySelector('.qty-btn-minus')?.addEventListener('click', () => {
+        updateQuantity(itemKey, -1);
+        renderCart();
+      });
+
+      itemEl.querySelector('.qty-btn-plus')?.addEventListener('click', () => {
+        updateQuantity(itemKey, 1);
+        renderCart();
+      });
+
+      itemEl.querySelector('.item-remove-btn')?.addEventListener('click', () => {
+        removeItem(itemKey);
+        toast.info(`Đã xóa "${item.name}" khỏi giỏ hàng.`);
+        renderCart();
+      });
+
+      const noteInput = itemEl.querySelector('.item-note-input');
+      noteInput?.addEventListener('change', (e) => {
+        const cartCurrent = getCart();
+        const curItem = cartCurrent.items.find(i => {
+          if (itemKey && typeof itemKey === 'number') {
+            return Number(i.dishId) === itemKey || Number(i.id) === itemKey;
+          }
+          return i.name === itemKey;
+        });
+        if (curItem) {
+          curItem.note = e.target.value.trim();
+          saveCart(cartCurrent);
+        }
+      });
+
       listEl.appendChild(itemEl);
     });
   }
@@ -581,6 +621,29 @@ function renderSummary() {
     if (freeshipStatus) freeshipStatus.textContent = '15k';
     if (freeshipBar) freeshipBar.style.width = `${percent}%`;
   }
+
+  // Calculate discount
+  let discount = 0;
+  if (appliedCoupon) {
+    const minOrder = Number(appliedCoupon.minOrder) || 0;
+    if (subtotal < minOrder) {
+      discount = 0;
+    } else if (appliedCoupon.type === 'percent') {
+      const raw = Math.round((subtotal * (Number(appliedCoupon.value) || 0)) / 100);
+      const max = Number(appliedCoupon.maxDiscount !== undefined ? appliedCoupon.maxDiscount : appliedCoupon.max);
+      discount = (max && max > 0) ? Math.min(raw, max) : raw;
+      discount = Math.min(subtotal, discount);
+    } else if (appliedCoupon.type === 'freeship') {
+      const max = Number(appliedCoupon.maxDiscount !== undefined ? appliedCoupon.maxDiscount : appliedCoupon.max);
+      const cap = (max && max > 0) ? Math.min(shippingFee, max) : shippingFee;
+      discount = Math.min(shippingFee, cap);
+    } else if (appliedCoupon.type === 'fixed') {
+      const val = Math.max(0, Number(appliedCoupon.value) || 0);
+      discount = Math.min(subtotal, val);
+    }
+  }
+
+  const total = Math.max(0, subtotal + shippingFee - discount);
 
   // Render price numbers
   const subtotalEl = document.getElementById('price-subtotal');
@@ -659,8 +722,8 @@ function setupCheckoutForm() {
       return;
     }
 
-    if (!/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(recipientPhone)) {
-      toast.warning('Số điện thoại không hợp lệ (cần 10 chữ số).');
+    if (!/^(?:\+?84|0)(3[2-9]|5[5-9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/.test(recipientPhone)) {
+      toast.warning('Số điện thoại không đúng chuẩn di động Việt Nam (10 số, bắt đầu 03x, 05x, 07x, 08x, 09x).');
       return;
     }
 
@@ -668,6 +731,9 @@ function setupCheckoutForm() {
       toast.warning('Vui lòng nhập địa chỉ giao hàng cụ thể.');
       return;
     }
+
+    // Tự động phân giải ID món nếu giỏ hàng còn món thiếu ID
+    await healCart(cart);
 
     const submitBtn = document.getElementById('submit-order-btn');
     try {
@@ -681,15 +747,20 @@ function setupCheckoutForm() {
       }
 
       const payload = {
-        restaurantId: cart.restaurantId,
-        items: cart.items.map(i => ({
-          dishId: i.dishId,
-          restaurantId: i.restaurantId || cart.restaurantId,
-          name: i.name,
-          priceNum: i.priceNum,
-          quantity: i.quantity,
-          note: i.note
-        })),
+        restaurantId: Number(cart.restaurantId),
+        items: cart.items.map(i => {
+          const rawId = i.dishId !== undefined ? i.dishId : i.id;
+          const numId = (rawId !== null && rawId !== undefined && !isNaN(Number(rawId)) && Number(rawId) > 0) ? Number(rawId) : undefined;
+          return {
+            dishId: numId,
+            id: numId,
+            name: i.name || '',
+            price: i.price || '',
+            priceNum: Number(i.priceNum) || 0,
+            quantity: Math.max(1, parseInt(i.quantity, 10) || 1),
+            note: i.note ? String(i.note).trim() : ''
+          };
+        }),
         recipientName,
         recipientPhone,
         deliveryAddress,

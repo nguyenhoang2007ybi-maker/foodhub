@@ -25,7 +25,7 @@ const initialSchema = {
   favorites: [],
   orders: [],
   carts: [],
-  emailVerifications: {},
+  coupons: [],
   settings: {
     siteName: 'FoodHub',
     slogan: 'Khám phá quán ăn ngon quanh bạn',
@@ -39,114 +39,46 @@ const initialSchema = {
 
 let dbCache = null;
 
-// Chuyển giá kiểu Việt Nam ("75.000đ", "10.000đ/cặp") thành số nguyên.
-export function parsePriceNumber(value) {
-  if (typeof value === 'number') {
-    return Number.isFinite(value) ? Math.round(value) : 0;
-  }
-  if (value === null || value === undefined) return 0;
-  const digits = String(value).replace(/[^\d]/g, '');
-  return digits ? parseInt(digits, 10) : 0;
-}
+function normalizeDbSchema(db) {
+  if (!db) return false;
+  if (!Array.isArray(db.orders)) db.orders = [];
+  if (!Array.isArray(db.carts)) db.carts = [];
+  if (!Array.isArray(db.coupons)) db.coupons = [];
+  if (!Array.isArray(db.restaurants)) db.restaurants = [];
+  if (!Array.isArray(db.users)) db.users = [];
+  if (!Array.isArray(db.reviews)) db.reviews = [];
 
-// Bổ sung id + priceNum còn thiếu cho menu và giỏ hàng.
-// Dữ liệu cũ từng bị mất 2 trường này khiến nút +/- và Xóa không tìm được món.
-function normalizeDb(db) {
-  let changed = false;
+  let needsSave = false;
 
-  (db.restaurants || []).forEach(restaurant => {
-    if (!Array.isArray(restaurant.menu)) {
-      restaurant.menu = [];
-      changed = true;
-    }
+  // Chuẩn hóa toàn bộ thực đơn của tất cả các quán ăn
+  db.restaurants.forEach(rest => {
+    if (Array.isArray(rest.menu)) {
+      rest.menu.forEach((dish, idx) => {
+        const dishId = (dish.id !== undefined && !isNaN(Number(dish.id)) && Number(dish.id) > 0)
+          ? Number(dish.id)
+          : (rest.id * 100 + (idx + 1));
+        const priceNum = (typeof dish.priceNum === 'number' && dish.priceNum > 0)
+          ? dish.priceNum
+          : (parseInt(String(dish.price || '').replace(/[^\d]/g, ''), 10) || 35000);
 
-    const restId = Number(restaurant.id) || 0;
-    const usedIds = new Set(
-      restaurant.menu
-        .map(dish => Number(dish.id))
-        .filter(id => Number.isFinite(id) && id > 0)
-    );
-
-    restaurant.menu.forEach((dish, index) => {
-      const currentId = Number(dish.id);
-      if (!Number.isFinite(currentId) || currentId <= 0) {
-        let newId = restId * 1000 + index + 1;
-        while (usedIds.has(newId)) newId += 1;
-        dish.id = newId;
-        usedIds.add(newId);
-        changed = true;
-      }
-
-      const currentPriceNum = Number(dish.priceNum);
-      if (!Number.isFinite(currentPriceNum) || currentPriceNum <= 0) {
-        const parsed = parsePriceNumber(dish.price);
-        if (parsed > 0) {
-          dish.priceNum = parsed;
-          changed = true;
+        if (dish.id !== dishId || dish.priceNum !== priceNum || dish.isAvailable === undefined) {
+          dish.id = dishId;
+          dish.priceNum = priceNum;
+          if (dish.isAvailable === undefined) dish.isAvailable = true;
+          needsSave = true;
         }
-      }
-    });
+      });
+    }
   });
 
-  (db.carts || []).forEach(cart => {
-    if (!Array.isArray(cart.items)) {
-      cart.items = [];
-      changed = true;
-      return;
-    }
-
-    const restaurant = (db.restaurants || []).find(r => Number(r.id) === Number(cart.restaurantId));
-    const menu = restaurant && Array.isArray(restaurant.menu) ? restaurant.menu : [];
-
-    cart.items.forEach(item => {
-      let dish = menu.find(m => Number(m.id) === Number(item.dishId));
-      if (!dish && item.name) {
-        dish = menu.find(m => m.name === item.name);
-      }
-
-      if (dish) {
-        if (Number(item.dishId) !== Number(dish.id)) {
-          item.dishId = dish.id;
-          changed = true;
-        }
-        if (Number(item.restaurantId) !== Number(restaurant.id)) {
-          item.restaurantId = restaurant.id;
-          changed = true;
-        }
-        if (item.name !== dish.name) {
-          item.name = dish.name;
-          changed = true;
-        }
-        if (item.price !== dish.price) {
-          item.price = dish.price;
-          changed = true;
-        }
-        const priceNum = Number(dish.priceNum) || parsePriceNumber(dish.price);
-        if (priceNum > 0 && Number(item.priceNum) !== priceNum) {
-          item.priceNum = priceNum;
-          changed = true;
-        }
-      }
-
-      const quantity = parseInt(item.quantity, 10);
-      if (!Number.isFinite(quantity) || quantity < 1) {
-        item.quantity = 1;
-        changed = true;
-      } else if (quantity > 99) {
-        item.quantity = 99;
-        changed = true;
-      }
-    });
-  });
-
-  return changed;
+  return needsSave;
 }
 
 export function getDb() {
   if (dbCache) {
     if (!Array.isArray(dbCache.orders)) dbCache.orders = [];
     if (!Array.isArray(dbCache.carts)) dbCache.carts = [];
-    if (normalizeDb(dbCache)) saveDb();
+    if (!Array.isArray(dbCache.coupons)) dbCache.coupons = [];
     return dbCache;
   }
 
@@ -154,9 +86,10 @@ export function getDb() {
     try {
       const content = fs.readFileSync(DB_FILE, 'utf-8');
       dbCache = JSON.parse(content);
-      if (!Array.isArray(dbCache.orders)) dbCache.orders = [];
-      if (!Array.isArray(dbCache.carts)) dbCache.carts = [];
-      if (normalizeDb(dbCache)) saveDb();
+      const needsSave = normalizeDbSchema(dbCache);
+      if (needsSave) {
+        saveDb();
+      }
       return dbCache;
     } catch (err) {
       console.error('Lỗi đọc database file, sử dụng schema mặc định:', err);
@@ -164,18 +97,24 @@ export function getDb() {
   }
 
   dbCache = { ...initialSchema };
-  normalizeDb(dbCache);
+  normalizeDbSchema(dbCache);
   saveDb();
   return dbCache;
 }
 
 export function saveDb() {
-  if (!dbCache) return false;
+  if (!dbCache) return;
+  const content = JSON.stringify(dbCache, null, 2);
   try {
     const tempFile = `${DB_FILE}.tmp`;
-    fs.writeFileSync(tempFile, JSON.stringify(dbCache, null, 2), 'utf-8');
-    fs.renameSync(tempFile, DB_FILE);
-    return true;
+    fs.writeFileSync(tempFile, content, 'utf-8');
+    try {
+      fs.renameSync(tempFile, DB_FILE);
+    } catch (renameErr) {
+      // Fallback tương thích Windows khi file bị lock (EPERM/EBUSY)
+      fs.writeFileSync(DB_FILE, content, 'utf-8');
+      try { fs.unlinkSync(tempFile); } catch (_) {}
+    }
   } catch (err) {
     console.error('Lỗi ghi database file:', err);
     return false;
@@ -189,7 +128,8 @@ export function recalculateRestaurantRating(restaurantId) {
   const restaurant = db.restaurants.find(r => r.id === restId);
   if (!restaurant) return;
 
-  const validReviews = db.reviews.filter(r => r.restaurantId === restId && r.status === 'approved');
+  // Lấy tất cả các đánh giá hợp lệ (không bị ẩn hoặc từ chối)
+  const validReviews = db.reviews.filter(r => r.restaurantId === restId && r.status !== 'hidden' && r.status !== 'rejected');
   if (validReviews.length === 0) {
     restaurant.reviewsCount = 0;
   } else {

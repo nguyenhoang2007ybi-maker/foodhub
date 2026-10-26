@@ -210,85 +210,11 @@ export function getCartKey() {
   return user ? `foodhub_cart_user_${user.id}` : 'foodhub_cart_guest';
 }
 
-// Lưu / đọc mã ưu đãi đang áp dụng để dùng chung giữa trang giỏ hàng và thanh toán
-function getCouponStorageKey() {
-  return `${getCartKey()}_coupon`;
-}
-
-export function getAppliedCoupon() {
-  try {
-    const raw = localStorage.getItem(getCouponStorageKey());
-    if (!raw) return null;
-    const code = JSON.parse(raw);
-    return COUPONS[code] || null;
-  } catch (e) {
-    return null;
-  }
-}
-
-export function setAppliedCoupon(coupon) {
-  try {
-    if (!coupon) {
-      localStorage.removeItem(getCouponStorageKey());
-      return;
-    }
-    localStorage.setItem(getCouponStorageKey(), JSON.stringify(coupon.code));
-  } catch (e) {
-    console.warn('Không thể lưu mã ưu đãi:', e);
-  }
-}
-
-export function clearAppliedCoupon() {
-  try {
-    localStorage.removeItem(getCouponStorageKey());
-  } catch (e) {
-    // ignore
-  }
-}
-
-// Lấy dữ liệu giỏ hàng hiện tại
+// Lấy dữ liệu giỏ hàng hiện tại (kèm cơ chế tự động sửa lỗi & làm sạch dữ liệu giỏ cũ)
 export function getCart() {
   try {
     const key = getCartKey();
-    let raw = localStorage.getItem(key);
-
-    // Nếu người dùng đã đăng nhập nhưng giỏ cá nhân rỗng, kiểm tra xem có giỏ hàng guest trước đó để chuyển giao (migrate) sang không
-    const user = getUser();
-    if (user) {
-      let isUserCartEmpty = true;
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed?.items) && parsed.items.length > 0) {
-            isUserCartEmpty = false;
-          }
-        } catch (e) {
-          isUserCartEmpty = true;
-        }
-      }
-
-      if (isUserCartEmpty) {
-        const guestRaw = localStorage.getItem('foodhub_cart_guest');
-        if (guestRaw) {
-          try {
-            const guestCart = JSON.parse(guestRaw);
-            if (Array.isArray(guestCart.items) && guestCart.items.length > 0) {
-              localStorage.setItem(key, guestRaw);
-              localStorage.removeItem('foodhub_cart_guest');
-              const guestCoupon = localStorage.getItem('foodhub_cart_guest_coupon');
-              if (guestCoupon) {
-                localStorage.setItem(`${key}_coupon`, guestCoupon);
-                localStorage.removeItem('foodhub_cart_guest_coupon');
-              }
-              raw = guestRaw;
-            }
-          } catch (e) {
-            // ignore
-          }
-        }
-      }
-    }
-
+    const raw = sessionStorage.getItem(key) || localStorage.getItem(key);
     if (!raw) {
       return {
         restaurantId: null,
@@ -300,26 +226,27 @@ export function getCart() {
     const cart = JSON.parse(raw);
     if (!Array.isArray(cart.items)) cart.items = [];
 
-    // Chuẩn hóa dữ liệu cũ: bổ sung dishId/priceNum/số lượng hợp lệ để
-    // các nút thao tác không bị lệch id hoặc tính sai thành tiền.
-    const usedIds = new Set();
-    cart.items = cart.items
-      .filter(item => item && typeof item === 'object')
-      .map((rawItem, index) => {
-        const item = { ...rawItem };
-        let dishId = resolveDishId(item, index);
-        while (usedIds.has(dishId)) dishId += 1;
-        usedIds.add(dishId);
+    // Chuẩn hóa cấu trúc giỏ hàng
+    cart.restaurantId = cart.restaurantId ? Number(cart.restaurantId) : null;
+    cart.items = cart.items.map(item => {
+      const rawId = item.dishId !== undefined ? item.dishId : (item.id !== undefined ? item.id : (item.foodId || item.menuItemId));
+      const numId = (rawId !== null && rawId !== undefined && !isNaN(Number(rawId))) ? Number(rawId) : null;
+      const priceNum = (typeof item.priceNum === 'number' && item.priceNum > 0)
+        ? item.priceNum
+        : (parseInt(String(item.price || '').replace(/[^\d]/g, ''), 10) || 0);
 
-        item.dishId = dishId;
-        item.quantity = resolveQuantity(item.quantity);
-        item.priceNum = resolvePriceNum(item);
-        item.note = item.note || '';
-        if (!item.restaurantId && cart.restaurantId) {
-          item.restaurantId = cart.restaurantId;
-        }
-        return item;
-      });
+      return {
+        ...item,
+        dishId: numId,
+        id: numId,
+        name: item.name || '',
+        price: item.price || (priceNum ? `${priceNum.toLocaleString('vi-VN')} đ` : '0 đ'),
+        priceNum,
+        image: item.image || '',
+        quantity: Math.max(1, parseInt(item.quantity, 10) || 1),
+        note: item.note ? String(item.note).trim() : ''
+      };
+    });
 
     return cart;
   } catch (e) {
@@ -337,6 +264,7 @@ export function getCart() {
 export function saveCart(cart, syncServer = true) {
   try {
     const key = getCartKey();
+    sessionStorage.setItem(key, JSON.stringify(cart));
     localStorage.setItem(key, JSON.stringify(cart));
     updateCartBadge();
 
@@ -421,36 +349,51 @@ export function addToCart(dish, restaurant, quantity = 1, note = '') {
   cart.restaurantName = restaurant.name;
   cart.restaurantAddress = restaurant.address || '';
 
-  const dishId = Number(menuItem.id);
-  const requestedQuantity = Number(quantity);
-  const addQuantity = Number.isInteger(requestedQuantity) && requestedQuantity > 0
-    ? Math.min(MAX_QUANTITY, requestedQuantity)
-    : 1;
+  // Phân giải ID món ăn chắc chắn (không bao giờ để NaN)
+  const rawId = dish.id !== undefined ? dish.id : (dish.dishId !== undefined ? dish.dishId : (dish.foodId || dish.menuItemId));
+  let resolvedId = (rawId !== null && rawId !== undefined && !isNaN(Number(rawId))) ? Number(rawId) : null;
 
-  // Khớp theo id hoặc theo tên để nâng cấp được các món cũ bị thiếu dishId.
-  const existingItem = cart.items.find(item =>
-    Number(item.dishId) === dishId || (item.name && item.name === menuItem.name)
-  );
+  // Nếu món không có ID nhưng có restaurant.menu, tìm theo tên trong thực đơn
+  if (resolvedId === null && restaurant && Array.isArray(restaurant.menu)) {
+    const match = restaurant.menu.find(m => m.name && dish.name && m.name.trim().toLowerCase() === dish.name.trim().toLowerCase());
+    if (match && match.id) {
+      resolvedId = Number(match.id);
+    }
+  }
+
+  const priceNum = (typeof dish.priceNum === 'number' && dish.priceNum > 0)
+    ? dish.priceNum
+    : (parseInt(String(dish.price || '').replace(/[^\d]/g, ''), 10) || 0);
+
+  // Tìm món đã tồn tại trong giỏ (so sánh theo ID hoặc tên)
+  const existingItem = cart.items.find(item => {
+    if (resolvedId !== null && item.dishId !== null) {
+      return Number(item.dishId) === resolvedId || Number(item.id) === resolvedId;
+    }
+    if (item.name && dish.name && item.name.trim().toLowerCase() === dish.name.trim().toLowerCase()) {
+      return true;
+    }
+    return false;
+  });
 
   if (existingItem) {
-    existingItem.dishId = dishId;
-    existingItem.restaurantId = restId;
-    existingItem.name = menuItem.name;
-    existingItem.price = menuItem.price;
-    existingItem.priceNum = priceNum;
-    existingItem.image = menuItem.image || '';
-    existingItem.quantity = Math.min(MAX_QUANTITY, resolveQuantity(existingItem.quantity) + addQuantity);
+    existingItem.quantity += Math.max(1, quantity);
+    if (resolvedId !== null) {
+      existingItem.dishId = resolvedId;
+      existingItem.id = resolvedId;
+    }
+    if (priceNum > 0) existingItem.priceNum = priceNum;
     if (note) existingItem.note = note;
     if (!existingItem.image && fallbackImage) existingItem.image = fallbackImage;
   } else {
     cart.items.push({
-      dishId,
-      restaurantId: restId,
-      name: menuItem.name,
-      price: menuItem.price,
-      priceNum,
-      image: menuItem.image || '',
-      quantity: addQuantity,
+      dishId: resolvedId,
+      id: resolvedId,
+      name: dish.name || '',
+      price: dish.price || (priceNum ? `${priceNum.toLocaleString('vi-VN')} đ` : '0 đ'),
+      priceNum: priceNum,
+      image: dish.image || '',
+      quantity: Math.max(1, quantity),
       note: note || ''
     });
   }
@@ -466,33 +409,20 @@ export function addToCart(dish, restaurant, quantity = 1, note = '') {
 
 // Thay thế giỏ hàng bằng món của quán mới (khi người dùng đồng ý đổi quán)
 export function replaceCartWithDish(dish, restaurant, quantity = 1, note = '') {
-  const restId = parsePositiveId(restaurant?.id);
-  const menuItem = resolveMenuItem(restaurant, dish);
+  const restId = Number(restaurant.id);
+  const rawId = dish.id !== undefined ? dish.id : (dish.dishId !== undefined ? dish.dishId : (dish.foodId || dish.menuItemId));
+  let resolvedId = (rawId !== null && rawId !== undefined && !isNaN(Number(rawId))) ? Number(rawId) : null;
 
-  if (!restId || !menuItem) {
-    return {
-      success: false,
-      invalid: true,
-      message: `Món "${dish?.name || 'đã chọn'}" không thuộc thực đơn của quán ${restaurant?.name || ''}.`.trim()
-    };
+  if (resolvedId === null && restaurant && Array.isArray(restaurant.menu)) {
+    const match = restaurant.menu.find(m => m.name && dish.name && m.name.trim().toLowerCase() === dish.name.trim().toLowerCase());
+    if (match && match.id) {
+      resolvedId = Number(match.id);
+    }
   }
 
-  if (menuItem.isAvailable === false) {
-    return {
-      success: false,
-      invalid: true,
-      message: `Món "${menuItem.name}" hiện đã hết hàng.`
-    };
-  }
-
-  const priceNum = resolvePriceNum(menuItem);
-  if (priceNum <= 0) {
-    return {
-      success: false,
-      invalid: true,
-      message: `Món "${menuItem.name}" chưa có giá hợp lệ để đặt hàng.`
-    };
-  }
+  const priceNum = (typeof dish.priceNum === 'number' && dish.priceNum > 0)
+    ? dish.priceNum
+    : (parseInt(String(dish.price || '').replace(/[^\d]/g, ''), 10) || 0);
 
   const newCart = {
     restaurantId: restId,
@@ -500,13 +430,13 @@ export function replaceCartWithDish(dish, restaurant, quantity = 1, note = '') {
     restaurantAddress: restaurant.address || '',
     items: [
       {
-        dishId: Number(menuItem.id),
-        restaurantId: restId,
-        name: menuItem.name,
-        price: menuItem.price,
-        priceNum,
-        image: menuItem.image || '',
-        quantity: resolveQuantity(quantity),
+        dishId: resolvedId,
+        id: resolvedId,
+        name: dish.name || '',
+        price: dish.price || (priceNum ? `${priceNum.toLocaleString('vi-VN')} đ` : '0 đ'),
+        priceNum: priceNum,
+        image: dish.image || '',
+        quantity: Math.max(1, quantity),
         note: note || ''
       }
     ]
@@ -519,7 +449,18 @@ export function replaceCartWithDish(dish, restaurant, quantity = 1, note = '') {
 // Cập nhật số lượng món
 export function updateQuantity(dishId, delta) {
   const cart = getCart();
-  const itemIndex = cart.items.findIndex(i => String(i.dishId) === String(dishId));
+  const idNum = (dishId !== null && dishId !== undefined && !isNaN(Number(dishId)) && Number(dishId) > 0) ? Number(dishId) : null;
+  const rawTargetName = (typeof dishId === 'string') ? dishId.trim().toLowerCase() : '';
+
+  const itemIndex = cart.items.findIndex(i => {
+    if (idNum !== null) {
+      return Number(i.dishId) === idNum || Number(i.id) === idNum;
+    }
+    if (rawTargetName && i.name && i.name.trim().toLowerCase() === rawTargetName) {
+      return true;
+    }
+    return false;
+  });
 
   if (itemIndex === -1) return cart;
 
@@ -538,7 +479,18 @@ export function updateQuantity(dishId, delta) {
 // Xóa 1 món khỏi giỏ
 export function removeItem(dishId) {
   const cart = getCart();
-  cart.items = cart.items.filter(i => String(i.dishId) !== String(dishId));
+  const idNum = (dishId !== null && dishId !== undefined && !isNaN(Number(dishId)) && Number(dishId) > 0) ? Number(dishId) : null;
+  const rawTargetName = (typeof dishId === 'string') ? dishId.trim().toLowerCase() : '';
+
+  cart.items = cart.items.filter(i => {
+    if (idNum !== null) {
+      return Number(i.dishId) !== idNum && Number(i.id) !== idNum;
+    }
+    if (rawTargetName && i.name && i.name.trim().toLowerCase() === rawTargetName) {
+      return false;
+    }
+    return true;
+  });
 
   if (cart.items.length === 0) {
     cart.restaurantId = null;
@@ -547,6 +499,42 @@ export function removeItem(dishId) {
   }
 
   saveCart(cart);
+  return cart;
+}
+
+// Tự động phân giải ID và cập nhật giá từ thực đơn nhà hàng (cho giỏ hàng cũ hoặc món thiếu ID)
+export async function healCart(cart) {
+  if (!cart) cart = getCart();
+  if (!cart.restaurantId || !Array.isArray(cart.items) || cart.items.length === 0) {
+    return cart;
+  }
+  const needsHealing = cart.items.some(i => i.dishId === null || !i.priceNum || i.priceNum <= 0);
+  if (!needsHealing) return cart;
+
+  try {
+    const res = await api.get(`/restaurants/${cart.restaurantId}`);
+    if (res && res.success && res.data && Array.isArray(res.data.menu)) {
+      const menu = res.data.menu;
+      let changed = false;
+      cart.items.forEach(item => {
+        if (item.dishId === null || !item.priceNum || item.priceNum <= 0) {
+          const match = menu.find(m => m.name && item.name && m.name.trim().toLowerCase() === item.name.trim().toLowerCase());
+          if (match && match.id) {
+            item.dishId = Number(match.id);
+            item.id = Number(match.id);
+            item.priceNum = Number(match.priceNum) || (parseInt(String(match.price || '').replace(/[^\d]/g, ''), 10) || item.priceNum);
+            item.price = match.price || item.price;
+            changed = true;
+          }
+        }
+      });
+      if (changed) {
+        saveCart(cart, true);
+      }
+    }
+  } catch (err) {
+    console.warn('Không thể tự động phân giải giỏ hàng:', err);
+  }
   return cart;
 }
 

@@ -1,0 +1,777 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "Quản trị viên FoodHub",
+      "email": "admin@foodhub.vn",
+      "phone": "0988889999",
+      "passwordHash": "$2b$10$Jb8b8E120JKKpGuT2ak1UORqy2WHJK5FO73.7iAmyrWSxXI6ALl4G",
+      "role": "admin",
+      "status": "active",
+      "avatar": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Nguyễn Văn A",
+      "email": "khachhang@foodhub.vn",
+      "phone": "0912345678",
+      "passwordHash": "$2b$10$2KgdoArEFZJgUzyYPIQdrOfLMgmKX46Z3NyCiIe6IQDGC5OWCc6Ae",
+      "role": "customer",
+      "status": "active",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "createdAt": "2026-02-15T00:00:00.000Z",
+      "addresses": [
+        {
+          "id": 1,
+          "recipientName": "Nguyễn Văn A",
+          "phone": "0988123456",
+          "province": "Hà Nội",
+          "district": "Cầu Giấy",
+          "ward": "Dịch Vọng Hậu",
+          "street": "Ngõ 20 Duy Tân, Tòa FPT",
+          "fullAddress": "Ngõ 20 Duy Tân, Tòa FPT, Dịch Vọng Hậu, Cầu Giấy, Hà Nội",
+          "isDefault": true,
+          "createdAt": "2026-10-25T03:49:13.548Z"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Trần Thị Thu Thảo",
+      "email": "thuthao@foodhub.vn",
+      "phone": "0977665544",
+      "passwordHash": "$2b$10$2KgdoArEFZJgUzyYPIQdrOfLMgmKX46Z3NyCiIe6IQDGC5OWCc6Ae",
+      "role": "customer",
+      "status": "active",
+      "avatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
+      "createdAt": "2026-03-10T00:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "name": "PH 6 5 9 1 4 LY HUY HOANG -",
+      "email": "lyhoang230607@gmail.com",
+      "phone": "0942994855",
+      "passwordHash": "$2b$10$hct8871Lr.QAZ2HR3WasrOFNzt7IJtESoItzX1mCEdJSv7PkEtWsa",
+      "role": "customer",
+      "status": "active",
+      "avatar": "https://ui-avatars.com/api/?name=PH%206%205%209%201%204%20LY%20HUY%20HOANG%20-&background=ff6b35&color=fff",
+      "createdAt": "2026-10-04T10:44:24.044Z",
+      "updatedAt": "2026-10-05T05:26:01.732Z"
+    },
+    {
+      "id": 5,
+      "name": "Bui Tuan Cuong",
+      "email": "dsandlsadjlsa@gmail.com",
+      "phone": "0123456789",
+      "passwordHash": "$2b$10$888VjabHnr7.E0ActzHKhOx9LtQcX6QT0x3zQ7V4YvI03s9R6.GyS",
+      "role": "customer",
+      "status": "active",
+      "avatar": "https://ui-avatars.com/api/?name=Bui%20Tuan%20Cuong&background=ff6b35&color=fff",
+      "createdAt": "2026-10-04T12:02:02.308Z",
+      "updatedAt": "2026-10-07T05:51:19.548Z"
+    },
+    {
+      "id": 6,
+      "name": "kdnvdgf",
+      "email": "lyhuy230607@gmail.com",
+      "phone": "0123456789",
+      "passwordHash": "$2b$10$wjwn2lZknj/KPy76U8lzZ.fl1cbxHzCNZd02im92fDJkF8QQqodnS",
+      "role": "customer",
+      "status": "active",
+      "avatar": "https://ui-avatars.com/api/?name=kdnvdgf&background=ff6b35&color=fff",
+      "createdAt": "2026-10-05T05:38:29.154Z"
+    }
+  ],
+  "restaurants": [
+    {
+      "id": 1,
+      "name": "Phở Thìn Lò Đúc",
+      "category": "Phở",
+      "address": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "area": "Hai Bà Trưng, Hà Nội",
+      "price": "50.000đ - 100.000đ",
+      "minPrice": 50000,
+      "maxPrice": 100000,
+      "image": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "gallery": [
+        "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1503764654157-72d979d9af2f?auto=format&fit=crop&w=800&q=80"
+      ],
+      "description": "Phở Thìn Lò Đúc nổi tiếng hơn 40 năm với món phở bò tái lăn nước dùng béo ngậy, thịt bò xào lửa lớn cùng nhiều hành lá tươi ngọt thanh.",
+      "openingHours": "06:00 - 21:00",
+      "phone": "024 3821 2709",
+      "rating": 5,
+      "reviewsCount": 10,
+      "featured": true,
+      "menu": [
+        {
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "description": "Bò xào lăn thơm béo, ngập hành lá"
+        },
+        {
+          "name": "Phở tái nạm",
+          "price": "65.000đ",
+          "description": "Thịt nạm mềm thơm giòn sần sật"
+        },
+        {
+          "name": "Quẩy giòn giòn (cặp)",
+          "price": "10.000đ",
+          "description": "Quẩy rán vàng ruộm ăn kèm phở"
+        },
+        {
+          "name": "Trứng gà trần",
+          "price": "10.000đ",
+          "description": "Trứng gà ta trần nước phở béo ngậy"
+        }
+      ],
+      "createdAt": "2026-01-10T00:00:00.000Z"
+    },
+    {
+      "id": 2,
+      "name": "Bún Chả Hương Liên (Bún Chả Obama)",
+      "category": "Bún",
+      "address": "24 Lê Văn Hưu, Phường Phan Chu Trinh, Hai Bà Trưng, Hà Nội",
+      "area": "Hai Bà Trưng, Hà Nội",
+      "price": "40.000đ - 80.000đ",
+      "minPrice": 40000,
+      "maxPrice": 80000,
+      "image": "https://images.unsplash.com/photo-1594998893017-36147cbcae05?auto=format&fit=crop&w=800&q=80",
+      "gallery": [
+        "https://images.unsplash.com/photo-1594998893017-36147cbcae05?auto=format&fit=crop&w=800&q=80",
+        "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?auto=format&fit=crop&w=800&q=80"
+      ],
+      "description": "Nổi tiếng khắp thế giới sau khi Tổng thống Obama ghé thăm thưởng thức cùng đầu bếp Anthony Bourdain năm 2016. Chả nướng than hoa thơm lừng chấm cùng nước mắm chua ngọt thanh tao.",
+      "openingHours": "08:00 - 20:30",
+      "phone": "024 3943 4106",
+      "rating": 4.9,
+      "reviewsCount": 5,
+      "featured": true,
+      "menu": [
+        {
+          "name": "Bún chả đặc biệt",
+          "price": "60.000đ",
+          "description": "Chả miếng + chả băm nướng than hoa"
+        },
+        {
+          "name": "Combo Obama",
+          "price": "105.000đ",
+          "description": "1 Bún chả + 1 Nem hải sản + 1 Bia Hà Nội"
+        },
+        {
+          "name": "Nem cua bể giòn rụm",
+          "price": "20.000đ/cái",
+          "description": "Nem cua bể vuông nhân thịt cua và tôm"
+        }
+      ],
+      "createdAt": "2026-01-15T00:00:00.000Z"
+    },
+    {
+      "id": 3,
+      "name": "Phở Gia Truyền Bát Đàn",
+      "category": "Phở",
+      "address": "49 Bát Đàn, Hoàn Kiếm, Hà Nội",
+      "area": "Hoàn Kiếm, Hà Nội",
+      "price": "50.000đ - 70.000đ",
+      "minPrice": 50000,
+      "maxPrice": 70000,
+      "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuAhmMhaaewUqbqiA6mS8JySWUa6EzvV0ISI7N_JHrILF5eOWzLZ-AZRrE6V_wJSjd6MR7EcaWNSDsVY-yu8ESQWIX5pHH2gEwjAWJrKa5ube6AKktpygodVsrhPKqQYgVoArvy5GRx3uMr3oWGG15VscMKZltS_SkMK1XrBC0gJyC11iLRp7HEXMl_OrvyYU5J8Cb8HSA82aOzEoBissoVg0pn24-oXXk9ny3HJ-Y8dw2j4GMAarmJtag",
+      "gallery": [
+        "https://lh3.googleusercontent.com/aida-public/AB6AXuAhmMhaaewUqbqiA6mS8JySWUa6EzvV0ISI7N_JHrILF5eOWzLZ-AZRrE6V_wJSjd6MR7EcaWNSDsVY-yu8ESQWIX5pHH2gEwjAWJrKa5ube6AKktpygodVsrhPKqQYgVoArvy5GRx3uMr3oWGG15VscMKZltS_SkMK1XrBC0gJyC11iLRp7HEXMl_OrvyYU5J8Cb8HSA82aOzEoBissoVg0pn24-oXXk9ny3HJ-Y8dw2j4GMAarmJtag"
+      ],
+      "description": "Quán phở truyền thống đậm chất phố cổ Hà Nội. Nước dùng trong veo ninh từ xương bò ngọt lịm không dùng mì chính, bánh phở mềm dẻo thái tay.",
+      "openingHours": "06:00 - 10:00 & 18:00 - 20:30",
+      "phone": "024 3828 0888",
+      "rating": 5,
+      "reviewsCount": 1,
+      "featured": true,
+      "menu": [
+        {
+          "name": "Phở bò tái nạm",
+          "price": "60.000đ",
+          "description": "Nước dùng trong ngọt thanh vị bò"
+        },
+        {
+          "name": "Phở bò tái lăn",
+          "price": "65.000đ",
+          "description": "Bò xào lửa lớn thơm lừng"
+        },
+        {
+          "name": "Phở bò chín bắp",
+          "price": "70.000đ",
+          "description": "Bắp bò hoa giòn ngọt"
+        }
+      ],
+      "createdAt": "2026-02-01T00:00:00.000Z"
+    },
+    {
+      "id": 4,
+      "name": "Cơm Tấm Sà Bì Chưởng",
+      "category": "Cơm",
+      "address": "86 Nguyễn Du, Quận Hai Bà Trưng, Hà Nội",
+      "area": "Đống Đa, Hà Nội",
+      "price": "65.000đ - 110.000đ",
+      "minPrice": 65000,
+      "maxPrice": 110000,
+      "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuAtx6aT1xqYQxMnng77DTNBmyuX4Y8ctYX4uy64a570PouXPx2UbgKTBOof1hLGVV9bjOBmYZ3xggdZzj-SyRBeqbgL7Dqq9DVG3AOmzIEAZXf24q2Z30C-mvBnqMUi_Nd7-ANfVZF5yf_bPIikqOY0fDoNsMUNkCLVmAQbxHCLCm8Cerpn_mJiO7NBciabO5mfMLD6sB0jFNpQflFelYSrD-SEQtaAR0OOhwER6CU8TMRkmqyPqIChSA",
+      "gallery": [
+        "https://lh3.googleusercontent.com/aida-public/AB6AXuAtx6aT1xqYQxMnng77DTNBmyuX4Y8ctYX4uy64a570PouXPx2UbgKTBOof1hLGVV9bjOBmYZ3xggdZzj-SyRBeqbgL7Dqq9DVG3AOmzIEAZXf24q2Z30C-mvBnqMUi_Nd7-ANfVZF5yf_bPIikqOY0fDoNsMUNkCLVmAQbxHCLCm8Cerpn_mJiO7NBciabO5mfMLD6sB0jFNpQflFelYSrD-SEQtaAR0OOhwER6CU8TMRkmqyPqIChSA"
+      ],
+      "description": "Thương hiệu cơm tấm chuẩn vị Sài Gòn do bộ ba streamer Độ Mixi, PewPew và Xemesis sáng lập. Sườn nướng sốt mật ong thơm lừng, bì dai giòn, chả trứng béo ngậy ăn kèm mỡ hành và đồ chua.",
+      "openingHours": "10:00 - 21:00",
+      "phone": "1900 633 895",
+      "rating": 5,
+      "reviewsCount": 1,
+      "featured": true,
+      "menu": [
+        {
+          "name": "Cơm tấm sườn bì chả đặc biệt",
+          "price": "89.000đ",
+          "description": "Đầy đủ sườn to, chả hấp, bì giòn thơm"
+        },
+        {
+          "name": "Cơm tấm sườn cọng nướng",
+          "price": "79.000đ",
+          "description": "Sườn cọng ướp đậm đà mềm mọng nước"
+        },
+        {
+          "name": "Canh rong biển thịt bằm",
+          "price": "15.000đ",
+          "description": "Canh nóng ăn kèm giải ngấy"
+        }
+      ],
+      "createdAt": "2026-02-05T00:00:00.000Z"
+    },
+    {
+      "id": 5,
+      "name": "Lẩu Nấm Ashima",
+      "category": "Lẩu",
+      "address": "182 Triệu Việt Vương, Quận Hai Bà Trưng, Hà Nội",
+      "area": "Cầu Giấy, Hà Nội",
+      "price": "250.000đ - 400.000đ",
+      "minPrice": 250000,
+      "maxPrice": 400000,
+      "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuCQJl3y6IW4kBLGRBR_5iCu8Lhlzciwxvy28Po2L9aBxOuQpd0KHcMbhhQ1GiU8QbZ42-FLMkwERNsBWGWZMqQWZXSsF2Kp3BQgz2elIshxeqkoRV9gRlSMB1sVXKY0gm3V9GLCj4tODfqgApdPuNrxaKkwxa3PjlR5FHKPUzE7ETHxkRHypydkCEs0fV9ncYrUd2a1XcyBzjbZczZEG1qtoh46gNdOqgHXJelUJh8lKYOFS9-bX-V1gg",
+      "gallery": [
+        "https://lh3.googleusercontent.com/aida-public/AB6AXuCQJl3y6IW4kBLGRBR_5iCu8Lhlzciwxvy28Po2L9aBxOuQpd0KHcMbhhQ1GiU8QbZ42-FLMkwERNsBWGWZMqQWZXSsF2Kp3BQgz2elIshxeqkoRV9gRlSMB1sVXKY0gm3V9GLCj4tODfqgApdPuNrxaKkwxa3PjlR5FHKPUzE7ETHxkRHypydkCEs0fV9ncYrUd2a1XcyBzjbZczZEG1qtoh46gNdOqgHXJelUJh8lKYOFS9-bX-V1gg"
+      ],
+      "description": "Thiên đường lẩu nấm thượng hạng với hơn 30 loại nấm quý tự nhiên nhập khẩu từ Nhật Bản, Hàn Quốc và Vân Nam. Nước lẩu ninh xương gà và thảo mộc thanh ngọt tự nhiên tốt cho sức khỏe.",
+      "openingHours": "11:00 - 14:00 & 17:30 - 22:00",
+      "phone": "024 7300 7318",
+      "rating": 4.6,
+      "reviewsCount": 0,
+      "featured": true,
+      "menu": [
+        {
+          "name": "Set Lẩu Nấm Quý Tự Nhiên",
+          "price": "650.000đ/set",
+          "description": "Gồm nấm tùng nhung, nấm gan bò, thịt bò Úc"
+        },
+        {
+          "name": "Bò Wagyu nhúng lẩu",
+          "price": "320.000đ",
+          "description": "Thịt bò tan chảy trong miệng"
+        },
+        {
+          "name": "Nấm vuốt hổ đen",
+          "price": "180.000đ",
+          "description": "Nấm quý vị ngọt giòn sần sật"
+        }
+      ],
+      "createdAt": "2026-02-10T00:00:00.000Z"
+    },
+    {
+      "id": 6,
+      "name": "Bánh Mì Huỳnh Hoa",
+      "category": "Đồ ăn nhanh",
+      "address": "26 Lê Thị Riêng, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh",
+      "area": "Quận 1, TP. Hồ Chí Minh",
+      "price": "58.000đ - 68.000đ",
+      "minPrice": 58000,
+      "maxPrice": 68000,
+      "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuBYw5ej-a_MMZX0O5jMXCLA7wFqfW3MRGaRXnhpoDzSGwVbJG_8tmU1To95MVmHLMT62kVVBNBw_IXSNaA_BGSchJ1ESaKh7uRhgaXAk46aOAgp5jQPKMJilenscHlAIZlawD_GAeMsZJCTJQVIVw-srjJH5PD-IDZp97LYdmuOQiUk4zrDqxQ6RZcMCkffGLYjepn6hKSMESMHemtgSZSu_J4IzWTaOwpyvaDNDhbGeltVv2vaBoIa1w",
+      "gallery": [
+        "https://lh3.googleusercontent.com/aida-public/AB6AXuBYw5ej-a_MMZX0O5jMXCLA7wFqfW3MRGaRXnhpoDzSGwVbJG_8tmU1To95MVmHLMT62kVVBNBw_IXSNaA_BGSchJ1ESaKh7uRhgaXAk46aOAgp5jQPKMJilenscHlAIZlawD_GAeMsZJCTJQVIVw-srjJH5PD-IDZp97LYdmuOQiUk4zrDqxQ6RZcMCkffGLYjepn6hKSMESMHemtgSZSu_J4IzWTaOwpyvaDNDhbGeltVv2vaBoIa1w"
+      ],
+      "description": "Biểu tượng bánh mì Sài Gòn nức tiếng với danh xưng \"bánh mì ô môi xôi thịt\". Ổ bánh mì nặng gần nửa ký đầy ắp bơ béo ngậy, pate béo mềm, giò chả, thịt đỏ và dưa góp.",
+      "openingHours": "11:00 - 21:00",
+      "phone": "089 945 4488",
+      "rating": 4.8,
+      "reviewsCount": 0,
+      "featured": true,
+      "menu": [
+        {
+          "name": "Bánh mì đặc biệt",
+          "price": "68.000đ",
+          "description": "Đầy đủ pate, bơ béo, 5 loại chả giò và thịt nguội"
+        },
+        {
+          "name": "Pate Huỳnh Hoa hộp 200g",
+          "price": "85.000đ",
+          "description": "Pate gia truyền béo ngậy thơm ngon"
+        }
+      ],
+      "createdAt": "2026-02-12T00:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "name": "Trà Sữa Ô Long Phê La",
+      "category": "Đồ uống",
+      "address": "24 Hàng Cót, Quận Hoàn Kiếm, Hà Nội",
+      "area": "Đống Đa, Hà Nội",
+      "price": "45.000đ - 65.000đ",
+      "minPrice": 45000,
+      "maxPrice": 65000,
+      "image": "https://lh3.googleusercontent.com/aida-public/AB6AXuAMf3sGJy750--3avLIBpKWYkyMhCluj_f3juCp8ATCi8ZiCT-4a9c7XymbpuhpyhaO_WugO8Fr5fiYYjfsXYH56nmh4wEEM1KAjdP9e6Mi-56GLyZKToBshmziSfMYg9GkFLL4JqU8Gh2N8XCv7akbcVv3OV3jTZ_ClAyXJWbGDQ5ndEMQi7WTfcJKcm2aP0gpq2-mrXAhjkwThkhK5gz7zKXSusL1Per9lQs085ajM9-JmXGnWZMFLg",
+      "gallery": [
+        "https://lh3.googleusercontent.com/aida-public/AB6AXuAMf3sGJy750--3avLIBpKWYkyMhCluj_f3juCp8ATCi8ZiCT-4a9c7XymbpuhpyhaO_WugO8Fr5fiYYjfsXYH56nmh4wEEM1KAjdP9e6Mi-56GLyZKToBshmziSfMYg9GkFLL4JqU8Gh2N8XCv7akbcVv3OV3jTZ_ClAyXJWbGDQ5ndEMQi7WTfcJKcm2aP0gpq2-mrXAhjkwThkhK5gz7zKXSusL1Per9lQs085ajM9-JmXGnWZMFLg"
+      ],
+      "description": "Thương hiệu trà ô long đặc sản đầu tiên tại Việt Nam mang đậm phong cách cắm trại mộc mạc. Lá trà Ô Long Đà Lạt tuyển chọn kết hợp cùng sữa tươi nguyên kem và trân châu ô long thủ công.",
+      "openingHours": "08:00 - 23:00",
+      "phone": "1900 3013",
+      "rating": 5,
+      "reviewsCount": 1,
+      "featured": true,
+      "menu": [
+        {
+          "name": "Ô Long Sữa Phê La",
+          "price": "55.000đ",
+          "description": "Trà ô long đậm vị hòa cùng sữa béo thơm dịu"
+        },
+        {
+          "name": "Ô Long Khói Trân Châu",
+          "price": "60.000đ",
+          "description": "Vị khói đặc trưng kèm trân châu dẻo thơm"
+        },
+        {
+          "name": "Phù Hoa Trà Trái Cây",
+          "price": "58.000đ",
+          "description": "Trà hoa quả chua ngọt thanh mát giải nhiệt"
+        }
+      ],
+      "createdAt": "2026-02-18T00:00:00.000Z"
+    },
+    {
+      "id": 8,
+      "name": "Nem Nướng Nha Trang Cô Điệp",
+      "category": "Đặc sản vùng miền",
+      "address": "29 Khương Trung, Quận Thanh Xuân, Hà Nội",
+      "area": "Thanh Xuân, Hà Nội",
+      "price": "35.000đ - 55.000đ",
+      "minPrice": 35000,
+      "maxPrice": 55000,
+      "image": "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80",
+      "gallery": [
+        "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=800&q=80"
+      ],
+      "description": "Quán nem nướng chuẩn vị Nha Trang đông khách bậc nhất khu vực sinh viên Thanh Xuân. Nước chấm thịt xay sền sệt béo ngậy ăn kèm nem que nóng hổi, ram giòn và xoài chua.",
+      "openingHours": "09:00 - 21:30",
+      "phone": "098 765 4321",
+      "rating": 4.7,
+      "reviewsCount": 0,
+      "featured": false,
+      "menu": [
+        {
+          "name": "Suất nem nướng đầy đủ",
+          "price": "45.000đ",
+          "description": "Nem nướng, ram giòn, rau sống xoài dưa leo"
+        },
+        {
+          "name": "Ram chiên giòn thêm",
+          "price": "10.000đ",
+          "description": "Bánh tráng cuộn chiên giòn rụm"
+        }
+      ],
+      "createdAt": "2026-02-20T00:00:00.000Z"
+    }
+  ],
+  "categories": [
+    {
+      "id": 1,
+      "name": "Phở",
+      "icon": "ramen_dining",
+      "description": "Phở truyền thống, phở cuốn, phở xào đậm vị Bắc"
+    },
+    {
+      "id": 2,
+      "name": "Bún",
+      "icon": "soup_kitchen",
+      "description": "Bún chả, bún đậu, bún bò, bún riêu cua thơm lừng"
+    },
+    {
+      "id": 3,
+      "name": "Cơm",
+      "icon": "rice_bowl",
+      "description": "Cơm tấm Sài Gòn, cơm văn phòng, cơm niêu giòn rụm"
+    },
+    {
+      "id": 4,
+      "name": "Lẩu",
+      "icon": "skillet",
+      "description": "Lẩu nấm, lẩu thái, lẩu riêu cua bắp bò tụ tập ấm cúng"
+    },
+    {
+      "id": 5,
+      "name": "Đồ ăn nhanh",
+      "icon": "fastfood",
+      "description": "Bánh mì, burger, gà rán, pizza ăn nhanh tiện lợi"
+    },
+    {
+      "id": 6,
+      "name": "Đồ uống",
+      "icon": "local_cafe",
+      "description": "Trà sữa trân châu, trà trái cây, cà phê rang xay thơm ngon"
+    },
+    {
+      "id": 7,
+      "name": "Món nướng",
+      "icon": "outdoor_grill",
+      "description": "Thịt nướng than hoa, BBQ lẩu nướng thơm nức mũi"
+    },
+    {
+      "id": 8,
+      "name": "Đặc sản vùng miền",
+      "icon": "dinner_dining",
+      "description": "Hương vị đặc sắc 3 miền Bắc - Trung - Nam"
+    }
+  ],
+  "reviews": [
+    {
+      "id": 1,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "ngon dep",
+      "images": [],
+      "status": "hidden",
+      "date": "2026-10-05",
+      "createdAt": "2026-09-25T01:30:00.000Z",
+      "updatedAt": "2026-10-05T05:42:34.985Z"
+    },
+    {
+      "id": 2,
+      "restaurantId": 1,
+      "userId": 3,
+      "userName": "Trần Thị Thu Thảo",
+      "userAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
+      "rating": 4.5,
+      "content": "Bát phở nhiều hành đúng gu mình, nước béo ngậy vừa vặn. Giá hơi cao một chút nhưng chất lượng xứng đáng.",
+      "images": [],
+      "status": "approved",
+      "date": "2026-09-28",
+      "createdAt": "2026-09-28T05:15:00.000Z"
+    },
+    {
+      "id": 2,
+      "restaurantId": 2,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Chả nướng than hoa rất thơm, nước chấm chua ngọt tròn vị, nem cua bể giòn rụm nhiều thịt!",
+      "images": [],
+      "status": "approved",
+      "date": "2026-09-29",
+      "createdAt": "2026-09-29T04:45:00.000Z"
+    },
+    {
+      "id": 3,
+      "restaurantId": 2,
+      "userId": 3,
+      "userName": "Trần Thị Thu Thảo",
+      "userAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
+      "rating": 4.5,
+      "content": "Không gian sạch sẽ, phục vụ nhanh dù quán rất đông khách quốc tế. Combo Obama ăn no căng.",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-01",
+      "createdAt": "2026-10-01T06:20:00.000Z"
+    },
+    {
+      "id": 4,
+      "restaurantId": 3,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Phở Bát Đàn đúng chuẩn hương vị phở xưa Hà Nội, nước xương bò ninh trong vắt ngọt lịm!",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-02",
+      "createdAt": "2026-10-02T00:10:00.000Z"
+    },
+    {
+      "id": 5,
+      "restaurantId": 4,
+      "userId": 3,
+      "userName": "Trần Thị Thu Thảo",
+      "userAvatar": "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Cơm tấm sườn cọng siêu ngon, thịt ướp mật ong thơm phức, nước mắm kẹo kẹo đậm đà đúng điệu Sài Gòn!",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-02",
+      "createdAt": "2026-10-02T12:30:00.000Z"
+    },
+    {
+      "id": 6,
+      "restaurantId": 7,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Ô long sữa Phê La thơm nức nở, trân châu ô long dai giòn tự làm. Quán decor kiểu camping rất chill.",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-03",
+      "createdAt": "2026-10-03T08:00:00.000Z"
+    },
+    {
+      "id": 7,
+      "restaurantId": 2,
+      "userId": 4,
+      "userName": "PH 6 5 9 1 4 LY HUY HOANG -",
+      "userAvatar": "https://ui-avatars.com/api/?name=PH%206%205%209%201%204%20LY%20HUY%20HOANG%20-&background=ff6b35&color=fff",
+      "rating": 5,
+      "content": "ngon đẹp",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-05",
+      "createdAt": "2026-10-05T05:28:24.375Z"
+    },
+    {
+      "id": 8,
+      "restaurantId": 1,
+      "userId": 6,
+      "userName": "kdnvdgf",
+      "userAvatar": "https://ui-avatars.com/api/?name=kdnvdgf&background=ff6b35&color=fff",
+      "rating": 5,
+      "content": "ngon dep",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-05",
+      "createdAt": "2026-10-05T05:39:09.951Z",
+      "updatedAt": "2026-10-07T05:51:36.641Z"
+    },
+    {
+      "id": 9,
+      "restaurantId": 1,
+      "userId": 4,
+      "userName": "PH 6 5 9 1 4 LY HUY HOANG -",
+      "userAvatar": "https://ui-avatars.com/api/?name=PH%206%205%209%201%204%20LY%20HUY%20HOANG%20-&background=ff6b35&color=fff",
+      "rating": 5,
+      "content": "jkbfdjldfb",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-05",
+      "createdAt": "2026-10-05T05:43:59.950Z",
+      "updatedAt": "2026-10-05T05:44:30.060Z"
+    },
+    {
+      "id": 10,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Món ăn tại đây cực kỳ xuất sắc, phục vụ chu đáo tận tình!",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-09",
+      "createdAt": "2026-10-09T06:20:57.435Z"
+    },
+    {
+      "id": 11,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "món ngon",
+      "images": [],
+      "status": "pending",
+      "date": "2026-10-25",
+      "createdAt": "2026-10-25T00:46:18.217Z"
+    },
+    {
+      "id": 12,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "món ăn ngon",
+      "images": [],
+      "status": "pending",
+      "date": "2026-10-25",
+      "createdAt": "2026-10-25T02:22:44.530Z"
+    },
+    {
+      "id": 13,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "quan này ăn ngon",
+      "images": [],
+      "status": "pending",
+      "date": "2026-10-25",
+      "createdAt": "2026-10-25T02:59:58.467Z"
+    },
+    {
+      "id": 14,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "quán này ngon",
+      "images": [],
+      "status": "pending",
+      "date": "2026-10-25",
+      "createdAt": "2026-10-25T03:24:37.399Z"
+    },
+    {
+      "id": 15,
+      "restaurantId": 2,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "quán này ngon",
+      "images": [],
+      "status": "pending",
+      "date": "2026-10-25",
+      "createdAt": "2026-10-25T03:25:07.429Z"
+    },
+    {
+      "id": 16,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Phở Thìn nước béo thơm ngậy ngập hành, chuẩn vị Hà Nội #1792900147067!",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-25",
+      "createdAt": "2026-10-25T03:49:07.072Z"
+    },
+    {
+      "id": 17,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Món ăn tuyệt vời tại Cơm Tấm Sài Gòn #1792900153473!",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-25",
+      "createdAt": "2026-10-25T03:49:13.476Z"
+    },
+    {
+      "id": 19,
+      "restaurantId": 2,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Nội dung thử nghiệm chống spam trùng lặp 1792900153497",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-25",
+      "createdAt": "2026-10-25T03:49:13.499Z"
+    }
+  ],
+  "favorites": [
+    {
+      "id": 6,
+      "userId": 5,
+      "restaurantId": 1,
+      "createdAt": "2026-10-04T12:02:19.795Z"
+    },
+    {
+      "id": 7,
+      "userId": 5,
+      "restaurantId": 2,
+      "createdAt": "2026-10-04T12:02:20.678Z"
+    },
+    {
+      "id": 8,
+      "userId": 6,
+      "restaurantId": 1,
+      "createdAt": "2026-10-05T05:39:17.918Z"
+    }
+  ],
+  "settings": {
+    "siteName": "FoodHub",
+    "slogan": "Khám phá quán ăn ngon quanh bạn",
+    "hotline": "1900 8888",
+    "email": "contact@foodhub.vn",
+    "address": "Hà Nội & TP. Hồ Chí Minh",
+    "description": "FoodHub là nền tảng tìm kiếm, khám phá và chia sẻ trải nghiệm ăn uống chân thực nhất.",
+    "logoUrl": "/favicon.svg"
+  },
+  "orders": [
+    {
+      "id": "FH261025-VUDA",
+      "code": "FH261025-VUDA",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Test Price Hacker",
+      "recipientPhone": "0988112233",
+      "deliveryAddress": "Hà Nội",
+      "addressDetails": null,
+      "note": "",
+      "items": [
+        {
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 2,
+          "total": 150000
+        }
+      ],
+      "totalItems": 2,
+      "subtotal": 150000,
+      "shippingFee": 15000,
+      "discount": 0,
+      "couponCode": "",
+      "total": 165000,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "pending",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-25T03:49:13.558Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        }
+      ],
+      "createdAt": "2026-10-25T03:49:13.558Z",
+      "updatedAt": "2026-10-25T03:49:13.558Z"
+    }
+  ],
+  "carts": [
+    {
+      "userId": 2,
+      "restaurantId": null,
+      "restaurantName": "",
+      "restaurantAddress": "",
+      "items": [],
+      "updatedAt": "2026-10-25T03:49:13.558Z"
+    }
+  ],
+  "coupons": []
+}

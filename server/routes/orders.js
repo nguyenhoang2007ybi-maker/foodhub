@@ -1,83 +1,22 @@
 ﻿import { Router } from 'express';
 import { getDb, saveDb, parsePriceNumber } from '../db.js';
 import { authenticateToken, requireAdmin } from '../middleware/auth.js';
-import {
-  ORDER_STATUSES,
-  canTransitionOrderStatus,
-  getAllowedNextStatuses,
-  getOrderStatusLabel,
-  isOrderStatus,
-  normalizeOrderStatus
-} from '../../shared/orderStatus.js';
-import {
-  CANCELLABLE_ORDER_STATUSES,
-  canActorCancelOrderStatus,
-  getCancelActorLabel,
-  resolveCancellationInput
-} from '../../shared/orderCancellation.js';
+import { validateCouponLogic, calculateCouponDiscount } from './coupons.js';
 
 const router = Router();
 
-const RESTAURANT_ROLES = new Set(['restaurant', 'restaurant_owner', 'restaurant_manager']);
+// Chuẩn số điện thoại di động Việt Nam (10 số, bắt đầu bằng 03, 05, 07, 08, 09 hoặc +84)
+export const VN_PHONE_REGEX = /^(?:\+?84|0)(3[2-9]|5[5-9]|7[0|6-9]|8[1-9]|9[0-9])[0-9]{7}$/;
 
-function toNumericIdList(value) {
-  if (Array.isArray(value)) {
-    return value
-      .map(item => Number(item))
-      .filter(item => Number.isFinite(item));
+export function normalizeVnPhone(phone) {
+  let p = String(phone || '').trim().replace(/[\s.-]/g, '');
+  if (p.startsWith('+84')) {
+    p = '0' + p.slice(3);
+  } else if (p.startsWith('84') && p.length === 11) {
+    p = '0' + p.slice(2);
   }
-  if (value === undefined || value === null || String(value).trim() === '') {
-    return [];
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? [parsed] : [];
+  return p;
 }
-
-function getManagedRestaurantIds(user, db) {
-  if (!user) return [];
-  const ids = new Set([
-    ...toNumericIdList(user.restaurantId),
-    ...toNumericIdList(user.restaurantIds),
-    ...toNumericIdList(user.managedRestaurantIds)
-  ]);
-
-  (db.restaurants || []).forEach(restaurant => {
-    const restaurantId = Number(restaurant.id);
-    const ownerId = Number(restaurant.ownerId);
-    const managerId = Number(restaurant.managerId);
-    const managerIds = toNumericIdList(restaurant.managerIds);
-    if (ownerId === user.id || managerId === user.id || managerIds.includes(user.id)) {
-      ids.add(restaurantId);
-    }
-  });
-
-  return [...ids];
-}
-
-function canManageRestaurant(user, restaurantId, db) {
-  if (!user) return false;
-  if (user.role === 'admin') return true;
-  if (!RESTAURANT_ROLES.has(user.role)) return false;
-  return getManagedRestaurantIds(user, db).includes(Number(restaurantId));
-}
-
-function resolveCancelActor(user) {
-  if (!user) return '';
-  if (user.role === 'admin') return 'admin';
-  if (RESTAURANT_ROLES.has(user.role)) return 'restaurant';
-  return 'customer';
-}
-
-function findOrderById(db, orderId) {
-  return (db.orders || []).find(o => o.id === orderId || o.code === orderId);
-}
-
-// Mã giảm giá hợp lệ của hệ thống
-const VALID_COUPONS = {
-  FOODHUB10: { type: 'percent', value: 10, max: 50000, description: 'Giảm 10% tối đa 50k' },
-  FREESHIP: { type: 'freeship', description: 'Miễn phí vận chuyển 15k' },
-  BANMOI: { type: 'fixed', value: 20000, minOrder: 50000, description: 'Giảm 20k cho đơn từ 50k' }
-};
 
 function generateOrderCode() {
   const dateStr = new Date().toISOString().slice(2, 10).replace(/-/g, '');
@@ -85,38 +24,25 @@ function generateOrderCode() {
   return `FH${dateStr}-${randomStr}`;
 }
 
-// Bóc tách giá tiền từ chuỗi kiểu Việt Nam (ví dụ "75.000đ" -> 75000)
-function parsePriceNumber(value) {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
-  if (!value) return 0;
-  const digits = String(value).replace(/[^\d]/g, '');
-  return digits ? parseInt(digits, 10) : 0;
-}
+export const VALID_ORDER_STATUSES = [
+  'pending',     // 1. Chờ xác nhận
+  'confirmed',   // 2. Đã xác nhận
+  'preparing',   // 3. Đang chuẩn bị món
+  'ready',       // 4. Đã sẵn sàng giao (chờ shipper lấy)
+  'shipping',    // 5. Đang giao hàng
+  'completed',   // 6. Giao thành công
+  'cancelled'    // 7. Đã hủy
+];
 
-// Tìm món ăn trong thực đơn quán. Ưu tiên khớp theo id, sau đó theo tên,
-// cuối cùng theo chỉ mục. Điều này giúp hệ thống hoạt động cả khi dữ liệu
-// thực đơn không có trường id (tương thích ngược).
-function findMenuItem(menu, item) {
-  if (!Array.isArray(menu)) return null;
-
-  const itemId = item.dishId !== undefined ? item.dishId : item.id;
-  if (itemId !== undefined && itemId !== null && itemId !== '') {
-    const byId = menu.find(m => m.id !== undefined && String(m.id) === String(itemId));
-    if (byId) return byId;
-  }
-
-  if (item.name) {
-    const byName = menu.find(m => m.name === item.name);
-    if (byName) return byName;
-  }
-
-  const index = Number(itemId);
-  if (Number.isInteger(index) && index >= 0 && index < menu.length) {
-    return menu[index];
-  }
-
-  return null;
-}
+export const ORDER_STATUS_LABELS = {
+  pending: 'Chờ xác nhận',
+  confirmed: 'Đã xác nhận',
+  preparing: 'Đang chuẩn bị',
+  ready: 'Đã sẵn sàng giao',
+  shipping: 'Đang giao hàng',
+  completed: 'Giao thành công',
+  cancelled: 'Đã hủy'
+};
 
 // 1. Khách hàng tạo đơn hàng mới
 // POST /api/orders
@@ -130,6 +56,7 @@ router.post('/', authenticateToken, (req, res) => {
       contactEmail,
       emailVerificationToken,
       deliveryAddress,
+      addressDetails,
       note,
       paymentMethod = 'COD',
       couponCode
@@ -147,10 +74,14 @@ router.post('/', authenticateToken, (req, res) => {
       return res.status(400).json({ success: false, message: 'Vui lòng cung cấp họ tên người nhận (tối thiểu 2 ký tự).' });
     }
 
-    const cleanPhone = (recipientPhone || '').trim();
-    if (!cleanPhone || !/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(cleanPhone)) {
-      return res.status(400).json({ success: false, message: 'Số điện thoại nhận hàng không hợp lệ (cần 10 chữ số).' });
+    const rawPhone = (recipientPhone || '').trim();
+    if (!VN_PHONE_REGEX.test(rawPhone)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Số điện thoại nhận hàng không đúng định dạng di động Việt Nam (10 số, đầu 03, 05, 07, 08, 09).'
+      });
     }
+    const cleanPhone = normalizeVnPhone(rawPhone);
 
     if (!deliveryAddress || deliveryAddress.trim().length < 5) {
       return res.status(400).json({ success: false, message: 'Địa chỉ giao hàng cần tối thiểu 5 ký tự.' });
@@ -184,50 +115,29 @@ router.post('/', authenticateToken, (req, res) => {
     const verifiedItems = [];
 
     for (const item of items) {
-      if (!item || typeof item !== 'object') {
-        return res.status(400).json({
-          success: false,
-          message: 'Dữ liệu món ăn trong giỏ hàng không hợp lệ.'
-        });
-      }
+      const rawDishId = item.dishId !== undefined ? item.dishId : (item.id !== undefined ? item.id : (item.foodId || item.menuItemId));
+      const numDishId = (rawDishId !== null && rawDishId !== undefined && !isNaN(Number(rawDishId))) ? Number(rawDishId) : null;
+      const rawName = String(item.name || '').trim().toLowerCase();
 
-      const itemRestaurantId = item.restaurantId === undefined || item.restaurantId === null ||
-        String(item.restaurantId).trim() === ''
-        ? restId
-        : Number(item.restaurantId);
-      if (!Number.isFinite(itemRestaurantId) || itemRestaurantId !== restId) {
-        return res.status(400).json({
-          success: false,
-          message: `Món "${item.name || 'đã chọn'}" thuộc quán khác, không thể đặt tại ${restaurant.name}.`
-        });
-      }
-
-      const rawDishId = item.dishId ?? item.id;
-      const dishId = Number(rawDishId);
-      const menu = restaurant.menu || [];
-      let dishInMenu = Number.isFinite(dishId) && dishId > 0
-        ? menu.find(m => Number(m.id) === dishId)
-        : null;
-
-      // Giỏ hàng cũ có thể chưa có dishId (dữ liệu menu trước đây thiếu id).
-      // Chỉ dự phòng theo tên chính xác khi id không thuộc một quán khác.
-      if (!dishInMenu && item.name) {
-        const idBelongsToAnotherRestaurant = Number.isFinite(dishId) && dishId > 0 &&
-          db.restaurants.some(r =>
-            Number(r.id) !== restId &&
-            Array.isArray(r.menu) &&
-            r.menu.some(m => Number(m.id) === dishId)
-          );
-
-        if (!idBelongsToAnotherRestaurant) {
-          dishInMenu = menu.find(m => m.name === item.name);
+      // Tìm món ăn trong thực đơn của quán: ưu tiên theo ID chuẩn, fallback theo Tên món
+      const dishInMenu = (restaurant.menu || []).find((m, idx) => {
+        // 1. Khớp theo ID nếu có ID số hợp lệ
+        if (numDishId !== null) {
+          if (m.id !== undefined && Number(m.id) === numDishId) return true;
+          if (Number(idx + 1) === numDishId) return true;
         }
-      }
+        // 2. Khớp theo tên món (chính xác không phân biệt hoa thường)
+        if (rawName && m.name && m.name.trim().toLowerCase() === rawName) {
+          return true;
+        }
+        return false;
+      });
 
       if (!dishInMenu) {
+        const displayItemName = item.name || (numDishId !== null ? `mã #${numDishId}` : 'chưa xác định');
         return res.status(400).json({
           success: false,
-          message: `Món ăn "${item.name || dishId}" không thuộc thực đơn của quán ${restaurant.name}.`
+          message: `Món ăn "${displayItemName}" không thuộc thực đơn của quán ${restaurant.name}.`
         });
       }
 
@@ -253,7 +163,7 @@ router.post('/', authenticateToken, (req, res) => {
       }
 
       // Lấy giá chuẩn từ cơ sở dữ liệu backend
-      const unitPrice = Number(dishInMenu.priceNum) || parsePriceNumber(dishInMenu.price);
+      const unitPrice = Number(dishInMenu.priceNum) || (parseInt(String(dishInMenu.price || '').replace(/[^\d]/g, ''), 10) || 0);
       if (unitPrice <= 0) {
         return res.status(400).json({
           success: false,
@@ -274,47 +184,79 @@ router.post('/', authenticateToken, (req, res) => {
       const itemTotal = unitPrice * quantity;
       subtotal += itemTotal;
 
-      const menuIndex = (restaurant.menu || []).indexOf(dishInMenu);
+      const finalDishId = (dishInMenu.id !== undefined && !isNaN(Number(dishInMenu.id)) && Number(dishInMenu.id) > 0)
+        ? Number(dishInMenu.id)
+        : (restId * 100 + ((restaurant.menu || []).indexOf(dishInMenu) + 1));
+
+      if (dishInMenu.id === undefined) {
+        dishInMenu.id = finalDishId;
+      }
+
       verifiedItems.push({
-        dishId: dishInMenu.id,
-        restaurantId: restaurant.id,
+        dishId: finalDishId,
+        id: finalDishId,
         name: dishInMenu.name,
         price: dishInMenu.price,
         priceNum: unitPrice,
         image: dishInMenu.image || '',
         quantity,
+        note: item.note ? String(item.note).trim() : '',
         total: itemTotal
       });
     }
 
-    // Tính phí giao hàng: 15.000đ (miễn phí với đơn từ 200.000đ)
+    // Phí giao hàng: 15.000đ (miễn phí với đơn từ 200.000đ)
     let shippingFee = subtotal >= 200000 ? 0 : 15000;
 
-    // Tính giảm giá theo mã coupon
+    // Tính giảm giá theo mã coupon (lấy từ db.coupons)
     let discount = 0;
     let appliedCoupon = '';
+    let matchedCoupon = null;
 
     if (couponCode) {
       const codeUpper = String(couponCode).trim().toUpperCase();
-      const coupon = VALID_COUPONS[codeUpper];
-      if (coupon) {
-        if (coupon.type === 'percent') {
-          discount = Math.min(coupon.max || 50000, Math.round((subtotal * coupon.value) / 100));
+      if (!Array.isArray(db.coupons)) db.coupons = [];
+      matchedCoupon = db.coupons.find(c => c.code.toUpperCase() === codeUpper);
+
+      if (matchedCoupon) {
+        const check = validateCouponLogic(matchedCoupon, {
+          subtotal,
+          restaurantId: restId,
+          userId: req.user.id
+        });
+        if (check.valid) {
+          discount = calculateCouponDiscount(matchedCoupon, subtotal, shippingFee);
           appliedCoupon = codeUpper;
-        } else if (coupon.type === 'freeship') {
-          discount = shippingFee;
-          appliedCoupon = codeUpper;
-        } else if (coupon.type === 'fixed') {
-          if (subtotal >= (coupon.minOrder || 0)) {
-            discount = coupon.value;
-            appliedCoupon = codeUpper;
-          }
+        } else {
+          return res.status(400).json({
+            success: false,
+            message: `Mã giảm giá "${codeUpper}" không hợp lệ: ${check.message}`
+          });
         }
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: `Mã giảm giá "${codeUpper}" không tồn tại trong hệ thống.`
+        });
       }
     }
 
     const total = Math.max(0, subtotal + shippingFee - discount);
     const orderCode = generateOrderCode();
+
+    // Ghi nhận lượt sử dụng coupon
+    if (matchedCoupon && appliedCoupon) {
+      matchedCoupon.usedCount = (matchedCoupon.usedCount || 0) + 1;
+      if (!Array.isArray(matchedCoupon.usedBy)) matchedCoupon.usedBy = [];
+      matchedCoupon.usedBy.push({
+        userId: req.user.id,
+        orderCode,
+        usedAt: new Date().toISOString()
+      });
+    }
+
+    const upperMethod = String(paymentMethod || '').toUpperCase();
+    const normMethod = (upperMethod === 'BANK_TRANSFER' || upperMethod === 'BANKING' || upperMethod === 'TRANSFER') ? 'BANK_TRANSFER' : 'COD';
 
     const newOrder = {
       id: orderCode,
@@ -332,6 +274,7 @@ router.post('/', authenticateToken, (req, res) => {
       emailVerified: true,
       emailVerifiedAt: new Date().toISOString(),
       deliveryAddress: deliveryAddress.trim(),
+      addressDetails: addressDetails || null,
       note: note ? note.trim() : '',
       items: verifiedItems,
       totalItems: verifiedItems.reduce((acc, cur) => acc + cur.quantity, 0),
@@ -339,10 +282,11 @@ router.post('/', authenticateToken, (req, res) => {
       shippingFee,
       discount,
       couponCode: appliedCoupon,
+      appliedCoupon: appliedCoupon,
       total,
-      paymentMethod: finalPaymentMethod,
-      paymentStatus: 'unpaid',
-      status: 'pending', // pending -> confirmed -> preparing -> shipping -> completed / cancelled
+      paymentMethod: normMethod,
+      paymentStatus: 'unpaid', // unpaid | paid | refunded
+      status: 'pending', // 7 standard statuses
       timeline: [
         {
           status: 'pending',
@@ -482,9 +426,9 @@ router.get('/:id', authenticateToken, (req, res) => {
   }
 });
 
-// 5. Hủy đơn hàng (khách hàng / quán / quản trị viên)
-// PATCH hoặc POST /api/orders/:id/cancel
-function cancelOrderHandler(req, res) {
+// 4. Khách hàng hoặc Admin hủy đơn hàng
+// PATCH /api/orders/:id/cancel
+router.patch('/:id/cancel', authenticateToken, (req, res) => {
   try {
     const db = getDb();
     const orderId = req.params.id;
@@ -499,118 +443,65 @@ function cancelOrderHandler(req, res) {
       return res.status(403).json({ success: false, message: 'Bạn không có quyền hủy đơn hàng này.' });
     }
 
-    if (actor === 'customer' && order.userId !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: 'Bạn chỉ được hủy đơn hàng thuộc tài khoản của mình.'
-      });
-    }
-
-    if (actor === 'restaurant' && !canManageRestaurant(req.user, order.restaurantId, db)) {
-      return res.status(403).json({
-        success: false,
-        message: 'Bạn không có quyền hủy đơn hàng của quán khác.'
-      });
-    }
-
-    const currentStatus = normalizeOrderStatus(order.status);
-    if (currentStatus === 'cancelled') {
-      return res.status(409).json({
-        success: false,
-        code: 'ORDER_ALREADY_CANCELLED',
-        message: 'Đơn hàng đã bị hủy trước đó.',
-        currentStatus: order.status
-      });
-    }
-
-    if (currentStatus === 'completed') {
-      return res.status(409).json({
-        success: false,
-        code: 'ORDER_COMPLETED',
-        message: 'Đơn hàng đã hoàn thành, không thể hủy.',
-        currentStatus: order.status
-      });
-    }
-
-    if (!canActorCancelOrderStatus(currentStatus)) {
-      return res.status(409).json({
-        success: false,
-        code: 'ORDER_NOT_CANCELLABLE',
-        message: `Không thể hủy đơn hàng đang ở trạng thái "${getOrderStatusLabel(currentStatus)}".`,
-        currentStatus: order.status,
-        allowedStatuses: [...CANCELLABLE_ORDER_STATUSES]
-      });
-    }
-
-    const hasExpectedStatus = req.body?.expectedStatus !== undefined &&
-      req.body?.expectedStatus !== null &&
-      String(req.body.expectedStatus).trim() !== '';
-    if (hasExpectedStatus && normalizeOrderStatus(req.body.expectedStatus) !== currentStatus) {
-      return res.status(409).json({
-        success: false,
-        code: 'ORDER_STATUS_CHANGED',
-        message: `Trạng thái đơn đã thay đổi thành "${getOrderStatusLabel(order.status)}". Vui lòng làm mới và thử lại.`,
-        currentStatus: order.status,
-        expectedStatus: req.body.expectedStatus
-      });
-    }
-
-    const rawReason = req.body?.reason ?? req.body?.cancelReason;
-    const rawNote = req.body?.note ?? req.body?.cancelNote;
-    const cancellation = resolveCancellationInput(actor, rawReason, rawNote);
-
-    if (!cancellation.ok) {
+    // Quy tắc hủy đơn: Chỉ cho phép hủy khi đang pending, confirmed hoặc preparing
+    const cancellableStatuses = ['pending', 'confirmed', 'preparing'];
+    if (!cancellableStatuses.includes(order.status)) {
+      if (['ready', 'shipping'].includes(order.status)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Món ăn đã sẵn sàng hoặc đang giao hàng, không thể hủy đơn. Vui lòng liên hệ hotline quán.'
+        });
+      }
+      if (order.status === 'completed') {
+        return res.status(400).json({
+          success: false,
+          message: 'Đơn hàng đã được giao thành công, không thể hủy.'
+        });
+      }
+      if (order.status === 'cancelled') {
+        return res.status(400).json({
+          success: false,
+          message: 'Đơn hàng này đã bị hủy trước đó.'
+        });
+      }
       return res.status(400).json({
         success: false,
-        code: 'INVALID_CANCEL_REASON',
-        message: cancellation.message
+        message: 'Đơn hàng không thể hủy ở trạng thái hiện tại.'
       });
     }
 
-    const now = new Date().toISOString();
-    const previousStatus = currentStatus;
-    const beforeSnapshot = {
-      status: order.status,
-      cancelReason: order.cancelReason,
-      cancelReasonCode: order.cancelReasonCode,
-      cancelNote: order.cancelNote,
-      cancelledBy: order.cancelledBy,
-      cancelledById: order.cancelledById,
-      cancelledByName: order.cancelledByName,
-      cancelledAt: order.cancelledAt,
-      updatedAt: order.updatedAt,
-      timelineLength: Array.isArray(order.timeline) ? order.timeline.length : 0
-    };
+    if (!reason || reason.trim().length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vui lòng cung cấp lý do hủy đơn (tối thiểu 3 ký tự).'
+      });
+    }
 
-    const actorLabel = getCancelActorLabel(actor);
+    // Hoàn lại lượt dùng mã giảm giá nếu có
+    if (order.couponCode && Array.isArray(db.coupons)) {
+      const coupon = db.coupons.find(c => c.code.toUpperCase() === order.couponCode.toUpperCase());
+      if (coupon) {
+        coupon.usedCount = Math.max(0, (coupon.usedCount || 1) - 1);
+        if (Array.isArray(coupon.usedBy)) {
+          coupon.usedBy = coupon.usedBy.filter(u => u.orderCode !== order.code);
+        }
+      }
+    }
+
+    const canceller = req.user.role === 'admin' ? 'Quản trị viên' : 'Khách hàng';
     order.status = 'cancelled';
-    order.cancelledBy = actor;
-    order.cancelledById = req.user.id;
-    order.cancelledByName = req.user.name || '';
-    order.cancelReason = cancellation.value.reason;
-    order.cancelReasonCode = cancellation.value.reasonCode;
-    order.cancelNote = cancellation.value.note;
-    order.cancelledAt = now;
-    order.updatedAt = now;
+    order.cancelledBy = canceller;
+    order.cancelledAt = new Date().toISOString();
+    order.cancelReason = reason.trim();
+    order.updatedAt = new Date().toISOString();
 
     if (!Array.isArray(order.timeline)) {
       order.timeline = [];
     }
-
-    const noteSuffix = cancellation.value.note ? ` - Ghi chú: ${cancellation.value.note}` : '';
     order.timeline.push({
       status: 'cancelled',
-      fromStatus: previousStatus,
-      toStatus: 'cancelled',
-      time: now,
-      cancelledAt: now,
-      message: `Đơn hàng đã bị hủy bởi ${actorLabel}. Lý do: ${cancellation.value.reason}${noteSuffix}`,
-      cancelledBy: actor,
-      cancelledById: req.user.id,
-      cancelledByName: req.user.name || '',
-      cancelReason: cancellation.value.reason,
-      cancelReasonCode: cancellation.value.reasonCode,
-      cancelNote: cancellation.value.note
+      time: new Date().toISOString(),
+      message: `Đơn hàng đã bị hủy bởi ${canceller}. Lý do: ${reason.trim()}`
     });
 
     if (!saveDb()) {
@@ -698,6 +589,7 @@ router.get('/admin/stats', authenticateToken, requireAdmin, (req, res) => {
       pending: orders.filter(o => o.status === 'pending').length,
       confirmed: orders.filter(o => o.status === 'confirmed').length,
       preparing: orders.filter(o => o.status === 'preparing').length,
+      ready: orders.filter(o => o.status === 'ready').length,
       shipping: orders.filter(o => o.status === 'shipping').length,
       completed: orders.filter(o => o.status === 'completed').length,
       cancelled: orders.filter(o => o.status === 'cancelled').length,
@@ -716,7 +608,7 @@ router.get('/admin/stats', authenticateToken, requireAdmin, (req, res) => {
   }
 });
 
-// 8. Quản trị viên: Cập nhật trạng thái đơn hàng
+// 7. Quản trị viên: Cập nhật trạng thái đơn hàng (7 bước chuẩn)
 // PATCH /api/orders/:id/status
 router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
   try {
@@ -725,11 +617,10 @@ router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
     const { status, note, expectedStatus } = req.body;
     const nextStatus = normalizeOrderStatus(status);
 
-    if (!isOrderStatus(nextStatus)) {
+    if (!VALID_ORDER_STATUSES.includes(status)) {
       return res.status(400).json({
         success: false,
-        code: 'INVALID_NEXT_STATUS',
-        message: `Trạng thái không hợp lệ. Cho phép: ${ORDER_STATUSES.join(', ')}`
+        message: `Trạng thái không hợp lệ. Cho phép: ${VALID_ORDER_STATUSES.join(', ')}`
       });
     }
 
@@ -778,12 +669,27 @@ router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
       pending: 'Chờ xác nhận',
       confirmed: 'Quán ăn đã xác nhận đơn hàng',
       preparing: 'Quán ăn đang chuẩn bị món',
+      ready: 'Món ăn đã chuẩn bị xong, sẵn sàng giao cho tài xế',
       shipping: 'Tài xế đang giao hàng',
       completed: 'Giao hàng thành công (Hoàn tất)',
       cancelled: 'Đơn hàng đã bị hủy'
     };
 
-    order.status = nextStatus;
+    // Nếu chuyển sang hủy bởi admin, hoàn lại coupon
+    if (status === 'cancelled' && order.status !== 'cancelled' && order.couponCode && Array.isArray(db.coupons)) {
+      const coupon = db.coupons.find(c => c.code.toUpperCase() === order.couponCode.toUpperCase());
+      if (coupon) {
+        coupon.usedCount = Math.max(0, (coupon.usedCount || 1) - 1);
+        if (Array.isArray(coupon.usedBy)) {
+          coupon.usedBy = coupon.usedBy.filter(u => u.orderCode !== order.code);
+        }
+      }
+      order.cancelledBy = 'Quản trị viên';
+      order.cancelledAt = new Date().toISOString();
+      if (note) order.cancelReason = note;
+    }
+
+    order.status = status;
     order.updatedAt = new Date().toISOString();
 
     if (nextStatus === 'completed') {
@@ -814,4 +720,3 @@ router.patch('/:id/status', authenticateToken, requireAdmin, (req, res) => {
 });
 
 export default router;
-

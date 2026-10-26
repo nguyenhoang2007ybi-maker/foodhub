@@ -166,7 +166,7 @@
             </div>
           </div>
 
-          <!-- RIGHT COLUMN: ORDER SUMMARY & CHECKOUT FORM (5 cols) -->
+          <!-- RIGHT COLUMN: CART SUMMARY (5 cols) -->
           <div class="lg:col-span-5 space-y-6">
             
             <!-- ORDER SUMMARY CARD -->
@@ -209,7 +209,7 @@
                 </div>
 
                 <!-- Fast Coupon Pills -->
-                <div class="flex flex-wrap items-center gap-1.5 pt-1">
+                <div id="cart-coupon-pills" class="flex flex-wrap items-center gap-1.5 pt-1">
                   <span class="text-[11px] text-secondary">Gợi ý:</span>
                   <button type="button" class="coupon-pill text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-container-high hover:bg-primary-container hover:text-white transition-colors" data-code="FOODHUB10">FOODHUB10 (-10%)</button>
                   <button type="button" class="coupon-pill text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-container-high hover:bg-primary-container hover:text-white transition-colors" data-code="FREESHIP">FREESHIP</button>
@@ -246,58 +246,38 @@
               </div>
             </div>
 
-            <!-- CHECKOUT CTA CARD -->
-            <div class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-5 sm:p-6 shadow-sm">
-              <h3 class="text-base font-bold text-on-surface mb-3 flex items-center gap-2">
-                <span class="material-symbols-outlined text-primary text-[20px]">rocket_launch</span>
-                <span>Sẵn sàng đặt hàng?</span>
-              </h3>
+            <!-- PROCEED TO CHECKOUT BUTTON CARD -->
+            <div class="bg-surface-container-lowest border border-surface-container-high rounded-3xl p-6 shadow-sm space-y-4">
+              <a
+                href="/checkout.html"
+                id="proceed-to-checkout-btn"
+                class="w-full h-12 rounded-2xl bg-primary hover:bg-primary-container text-white font-black text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+              >
+                <span>Tiến hành đặt hàng (Bước tiếp theo)</span>
+                <span class="material-symbols-outlined text-[20px]">arrow_forward</span>
+              </a>
 
-              <!-- Auth Notice if Guest -->
-              <div id="guest-checkout-warning" class="hidden mb-4 p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl text-xs text-amber-800 flex items-start gap-2.5">
-                <span class="material-symbols-outlined text-amber-600 text-[20px] flex-shrink-0">info</span>
-                <div class="flex-1">
-                  <p class="font-bold">Bạn chưa đăng nhập!</p>
-                  <p class="text-[11px] text-amber-700 mt-0.5">Vui lòng đăng nhập để lưu và theo dõi trạng thái đơn hàng của bạn.</p>
-                  <a href="/login.html?returnUrl=%2Fcheckout.html" class="inline-block mt-1.5 text-xs font-bold text-amber-900 underline hover:text-black">Đăng nhập ngay</a>
+              <div class="p-3 bg-surface-container-low rounded-xl text-[11px] text-secondary flex items-start gap-2">
+                <span class="material-symbols-outlined text-primary text-[16px] flex-shrink-0 mt-0.5">verified</span>
+                <span>Thông tin người nhận, địa chỉ giao hàng và mã ưu đãi sẽ được chọn ở bước tiếp theo.</span>
+              </div>
+            </div>
+
+            <!-- LINK TO TRACKING -->
+            <div class="p-4 rounded-2xl bg-surface-container-lowest border border-surface-container-high flex items-center justify-between shadow-sm">
+              <div class="flex items-center gap-2.5">
+                <span class="material-symbols-outlined text-primary text-[22px]">history</span>
+                <div>
+                  <p class="text-xs font-bold text-on-surface">Đã có đơn hàng?</p>
+                  <p class="text-[11px] text-secondary">Theo dõi tiến trình giao hàng 7 giai đoạn</p>
                 </div>
               </div>
-
-              <ul class="space-y-2 text-xs text-secondary mb-5">
-                <li class="flex items-start gap-2">
-                  <span class="material-symbols-outlined text-primary text-[18px] flex-shrink-0">local_shipping</span>
-                  <span>Điền thông tin người nhận và địa chỉ giao hàng chi tiết ở bước tiếp theo.</span>
-                </li>
-                <li class="flex items-start gap-2">
-                  <span class="material-symbols-outlined text-primary text-[18px] flex-shrink-0">mark_email_read</span>
-                  <span>Xác nhận email bằng mã OTP để bảo đảm nhận được thông tin đơn hàng.</span>
-                </li>
-              </ul>
-
-              <!-- Action buttons: Tiếp tục mua sắm & Tiến hành thanh toán -->
-              <div class="flex flex-col sm:flex-row gap-3">
-                <a
-                  href="/explore.html"
-                  class="w-full sm:w-1/2 h-12 rounded-2xl bg-surface-container-low hover:bg-surface-container text-on-surface font-bold text-xs sm:text-sm border border-surface-container-high transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <span class="material-symbols-outlined text-[18px]">storefront</span>
-                  <span>Tiếp tục mua sắm</span>
-                </a>
-
-                <button
-                  id="proceed-to-checkout-btn"
-                  type="button"
-                  class="w-full sm:w-1/2 h-12 rounded-2xl bg-primary hover:bg-primary-container text-white font-bold text-xs sm:text-sm shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.99]"
-                >
-                  <span>Tiến hành thanh toán</span>
-                  <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
-                </button>
-              </div>
-
-              <p class="text-[11px] text-secondary text-center mt-3">
-                Thông tin giao hàng và xác nhận email sẽ được nhập ở trang thanh toán.
-              </p>
+              <a href="/order-tracking.html" class="h-9 px-3.5 rounded-xl bg-surface-container-low hover:bg-surface-container text-primary font-bold text-xs flex items-center gap-1 transition-colors">
+                <span>Theo dõi</span>
+                <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+              </a>
             </div>
+
 
           </div>
 

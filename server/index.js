@@ -13,6 +13,7 @@ import favoriteRoutes from './routes/favorites.js';
 import cartRoutes from './routes/cart.js';
 import orderRoutes from './routes/orders.js';
 import adminRoutes from './routes/admin.js';
+import couponRoutes from './routes/coupons.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,6 +48,14 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+// Disable caching for all API responses
+app.use('/api', (req, res, next) => {
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  next();
+});
+
 // Mount Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/email', emailRoutes);
@@ -57,6 +66,7 @@ app.use('/api/favorites', favoriteRoutes);
 app.use('/api/cart', cartRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/coupons', couponRoutes);
 
 // Fallback 404 cho các route /api không tồn tại (Express 5 safe)
 app.use('/api', (req, res) => {
