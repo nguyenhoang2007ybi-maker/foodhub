@@ -285,10 +285,10 @@ function setupCoupons() {
   const removeBtn = document.getElementById('remove-coupon-btn');
   const appliedBox = document.getElementById('applied-coupon-box');
   const appliedLabel = document.getElementById('applied-coupon-label');
-  const pills = document.querySelectorAll('.coupon-pill');
+  const pillsContainer = document.getElementById('checkout-coupon-pills');
 
   const handleApply = async (code) => {
-    const cleanCode = (code || couponInput.value || '').trim().toUpperCase();
+    const cleanCode = (code || couponInput?.value || '').trim().toUpperCase();
     if (!cleanCode) {
       toast.warning('Vui lòng nhập mã giảm giá.');
       return;
@@ -306,6 +306,7 @@ function setupCoupons() {
       if (res && res.valid) {
         appliedCoupon = res.coupon;
         discountAmount = Number(res.discount) || 0;
+        sessionStorage.setItem('foodhub_pending_coupon', cleanCode);
         toast.success(res.message || `Đã áp dụng mã ${cleanCode}!`);
 
         if (appliedBox) appliedBox.classList.remove('hidden');
@@ -313,31 +314,71 @@ function setupCoupons() {
         if (couponInput) couponInput.value = cleanCode;
 
         renderOrderSummary();
+      } else {
+        toast.error(res?.message || 'Mã giảm giá không hợp lệ.');
       }
     } catch (err) {
+      console.error('Lỗi áp dụng mã coupon:', err);
       toast.error(err.message || 'Mã giảm giá không hợp lệ hoặc đã hết lượt.');
     }
   };
 
   if (applyBtn) applyBtn.addEventListener('click', () => handleApply());
 
-  pills.forEach(pill => {
-    pill.addEventListener('click', () => {
-      const code = pill.dataset.code;
-      if (couponInput) couponInput.value = code;
-      handleApply(code);
-    });
+  couponInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleApply();
+    }
   });
+
+  const bindPills = (root) => {
+    root.querySelectorAll('.coupon-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const code = pill.dataset.code;
+        if (couponInput) couponInput.value = code;
+        handleApply(code);
+      });
+    });
+  };
+
+  if (pillsContainer) {
+    bindPills(pillsContainer);
+  }
+
+  // Tải danh sách mã gợi ý động từ backend
+  api.get('/coupons/public').then(res => {
+    if (res && res.success && Array.isArray(res.data) && res.data.length > 0 && pillsContainer) {
+      pillsContainer.innerHTML = `<span class="text-[11px] text-secondary">Gợi ý:</span>` +
+        res.data.slice(0, 5).map(c => {
+          let label = c.code;
+          if (c.type === 'percent') label += ` (-${c.value}%)`;
+          else if (c.type === 'fixed') label += ` (-${Math.round(c.value / 1000)}k)`;
+          else if (c.type === 'freeship') label += ` (Freeship)`;
+          return `<button type="button" class="coupon-pill text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-container-high hover:bg-primary-container hover:text-white transition-colors cursor-pointer" data-code="${c.code}">${label}</button>`;
+        }).join('');
+
+      bindPills(pillsContainer);
+    }
+  }).catch(() => {});
 
   if (removeBtn) {
     removeBtn.addEventListener('click', () => {
       appliedCoupon = null;
       discountAmount = 0;
+      sessionStorage.removeItem('foodhub_pending_coupon');
       if (appliedBox) appliedBox.classList.add('hidden');
       if (couponInput) couponInput.value = '';
       toast.info('Đã gỡ mã giảm giá.');
       renderOrderSummary();
     });
+  }
+
+  // Tự động kiểm tra và áp dụng mã nếu đã được chọn ở trang giỏ hàng
+  const pendingCode = sessionStorage.getItem('foodhub_pending_coupon');
+  if (pendingCode && cart.items.length > 0) {
+    if (couponInput) couponInput.value = pendingCode;
+    handleApply(pendingCode);
   }
 }
 
@@ -436,6 +477,7 @@ async function handlePlaceOrder() {
 
     if (res && res.success && res.data) {
       toast.success('Đặt hàng thành công! Đang chuyển đến trang theo dõi đơn hàng...');
+      sessionStorage.removeItem('foodhub_pending_coupon');
       // Xóa sạch giỏ hàng local
       saveCart({
         restaurantId: null,

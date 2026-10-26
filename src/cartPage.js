@@ -19,12 +19,6 @@ let appliedCoupon = null;
 let isSubmitting = false;
 let pendingCancelOrderId = null;
 
-const COUPONS = {
-  FOODHUB10: { code: 'FOODHUB10', type: 'percent', value: 10, max: 50000, description: 'Giảm 10% tối đa 50k' },
-  FREESHIP: { code: 'FREESHIP', type: 'freeship', description: 'Miễn phí giao hàng 15k' },
-  BANMOI: { code: 'BANMOI', type: 'fixed', value: 20000, minOrder: 50000, description: 'Giảm 20k cho đơn từ 50k' }
-};
-
 const STATUS_MAP = {
   pending: { label: 'Chờ xác nhận', color: 'bg-amber-100 text-amber-800 border-amber-300', icon: 'schedule' },
   confirmed: { label: 'Đã xác nhận', color: 'bg-sky-100 text-sky-800 border-sky-300', icon: 'thumb_up' },
@@ -129,8 +123,17 @@ function setupCartView() {
     applyCouponCode(code);
   });
 
+  couponInput?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const code = (couponInput.value || '').trim().toUpperCase();
+      applyCouponCode(code);
+    }
+  });
+
   removeCouponBtn?.addEventListener('click', () => {
     appliedCoupon = null;
+    sessionStorage.removeItem('foodhub_pending_coupon');
     if (couponInput) couponInput.value = '';
     document.getElementById('applied-coupon-badge')?.classList.add('hidden');
     toast.info('Đã gỡ mã ưu đãi.');
@@ -154,44 +157,94 @@ function setupCartView() {
     }
   });
 
-  // Fast coupon pills
-  document.querySelectorAll('.coupon-pill').forEach(pill => {
-    pill.addEventListener('click', () => {
-      const code = pill.dataset.code;
-      if (couponInput) couponInput.value = code;
-      applyCouponCode(code);
-    });
-  });
+  // Load dynamic suggestion pills and bind clicks
+  loadPublicCouponPills();
+
+  // Khôi phục mã giảm giá đã lưu nếu có
+  const savedPendingCoupon = sessionStorage.getItem('foodhub_pending_coupon');
+  if (savedPendingCoupon && getCartSubtotal() > 0) {
+    if (couponInput) couponInput.value = savedPendingCoupon;
+    applyCouponCode(savedPendingCoupon);
+  }
 }
 
-function applyCouponCode(code) {
-  if (!code) {
+async function loadPublicCouponPills() {
+  const container = document.getElementById('cart-coupon-pills');
+  const couponInput = document.getElementById('coupon-input');
+
+  const bindPills = (root) => {
+    root.querySelectorAll('.coupon-pill').forEach(pill => {
+      pill.addEventListener('click', () => {
+        const code = pill.dataset.code;
+        if (couponInput) couponInput.value = code;
+        applyCouponCode(code);
+      });
+    });
+  };
+
+  // Bind initial static pills first
+  if (container) {
+    bindPills(container);
+  }
+
+  try {
+    const res = await api.get('/coupons/public');
+    if (res && res.success && Array.isArray(res.data) && res.data.length > 0 && container) {
+      container.innerHTML = `<span class="text-[11px] text-secondary">Gợi ý:</span>` +
+        res.data.slice(0, 5).map(c => {
+          let label = c.code;
+          if (c.type === 'percent') label += ` (-${c.value}%)`;
+          else if (c.type === 'fixed') label += ` (-${Math.round(c.value / 1000)}k)`;
+          else if (c.type === 'freeship') label += ` (Freeship)`;
+          return `<button type="button" class="coupon-pill text-[10px] font-bold px-2 py-0.5 rounded-md bg-surface-container-high hover:bg-primary-container hover:text-white transition-colors cursor-pointer" data-code="${c.code}">${label}</button>`;
+        }).join('');
+
+      bindPills(container);
+    }
+  } catch (_) {}
+}
+
+async function applyCouponCode(code) {
+  const cleanCode = (code || '').trim().toUpperCase();
+  if (!cleanCode) {
     toast.warning('Vui lòng nhập mã ưu đãi.');
     return;
   }
 
-  const coupon = COUPONS[code];
-  if (!coupon) {
-    toast.error('Mã giảm giá không tồn tại hoặc đã hết hạn.');
-    return;
-  }
-
   const subtotal = getCartSubtotal();
-  if (coupon.type === 'fixed' && coupon.minOrder && subtotal < coupon.minOrder) {
-    toast.warning(`Mã ${code} chỉ áp dụng cho đơn hàng từ ${formatVND(coupon.minOrder)}.`);
-    return;
-  }
+  const cart = getCart();
 
-  appliedCoupon = coupon;
-  const badge = document.getElementById('applied-coupon-badge');
-  const badgeText = document.getElementById('applied-coupon-text');
-  if (badge && badgeText) {
-    badgeText.textContent = `Đã áp dụng mã: ${coupon.code} (${coupon.description})`;
-    badge.classList.remove('hidden');
-  }
+  try {
+    const res = await api.post('/coupons/validate', {
+      code: cleanCode,
+      subtotal,
+      restaurantId: cart.restaurantId
+    });
 
-  toast.success(`Áp dụng thành công mã ưu đãi "${coupon.code}"!`);
-  renderSummary();
+    if (res && res.valid) {
+      appliedCoupon = res.coupon;
+      sessionStorage.setItem('foodhub_pending_coupon', cleanCode);
+
+      const badge = document.getElementById('applied-coupon-badge');
+      const badgeText = document.getElementById('applied-coupon-text');
+      const couponInput = document.getElementById('coupon-input');
+
+      if (couponInput) couponInput.value = cleanCode;
+      const discount = Number(res.discount) || 0;
+      if (badge && badgeText) {
+        badgeText.textContent = `Đã áp dụng mã: ${appliedCoupon.code} (-${formatVND(discount)})`;
+        badge.classList.remove('hidden');
+      }
+
+      toast.success(res.message || `Áp dụng thành công mã ưu đãi "${appliedCoupon.code}"!`);
+      renderSummary();
+    } else {
+      toast.error(res?.message || 'Mã giảm giá không hợp lệ.');
+    }
+  } catch (err) {
+    console.error('Lỗi kiểm tra mã giảm giá:', err);
+    toast.error(err.message || 'Mã giảm giá không tồn tại hoặc đã hết hạn.');
+  }
 }
 
 function renderCart() {
@@ -350,14 +403,21 @@ function renderSummary() {
   // Calculate discount
   let discount = 0;
   if (appliedCoupon) {
-    if (appliedCoupon.type === 'percent') {
-      discount = Math.min(appliedCoupon.max || 50000, Math.round((subtotal * appliedCoupon.value) / 100));
+    const minOrder = Number(appliedCoupon.minOrder) || 0;
+    if (subtotal < minOrder) {
+      discount = 0;
+    } else if (appliedCoupon.type === 'percent') {
+      const raw = Math.round((subtotal * (Number(appliedCoupon.value) || 0)) / 100);
+      const max = Number(appliedCoupon.maxDiscount !== undefined ? appliedCoupon.maxDiscount : appliedCoupon.max);
+      discount = (max && max > 0) ? Math.min(raw, max) : raw;
+      discount = Math.min(subtotal, discount);
     } else if (appliedCoupon.type === 'freeship') {
-      discount = shippingFee;
+      const max = Number(appliedCoupon.maxDiscount !== undefined ? appliedCoupon.maxDiscount : appliedCoupon.max);
+      const cap = (max && max > 0) ? Math.min(shippingFee, max) : shippingFee;
+      discount = Math.min(shippingFee, cap);
     } else if (appliedCoupon.type === 'fixed') {
-      if (subtotal >= (appliedCoupon.minOrder || 0)) {
-        discount = appliedCoupon.value;
-      }
+      const val = Math.max(0, Number(appliedCoupon.value) || 0);
+      discount = Math.min(subtotal, val);
     }
   }
 

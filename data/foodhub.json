@@ -43,7 +43,7 @@
           "ward": "Dịch Vọng Hậu",
           "street": "Ngõ 20 Duy Tân, Tòa FPT",
           "fullAddress": "Ngõ 20 Duy Tân, Tòa FPT, Dịch Vọng Hậu, Cầu Giấy, Hà Nội",
-          "isDefault": true,
+          "isDefault": false,
           "createdAt": "2026-10-25T13:33:14.079Z"
         },
         {
@@ -57,6 +57,18 @@
           "fullAddress": "48 , P. 48 phu kieu, Q. Bắc Từ Liêm, Hà Nội, 48 phu kieu, Bắc Từ Liêm, Hà Nội",
           "isDefault": false,
           "createdAt": "2026-10-25T17:14:18.734Z"
+        },
+        {
+          "id": 4,
+          "recipientName": "Nguyễn Văn A",
+          "phone": "0988123456",
+          "province": "Hà Nội",
+          "district": "Cầu Giấy",
+          "ward": "Dịch Vọng Hậu",
+          "street": "Ngõ 20 Duy Tân, Tòa FPT",
+          "fullAddress": "Ngõ 20 Duy Tân, Tòa FPT, Dịch Vọng Hậu, Cầu Giấy, Hà Nội",
+          "isDefault": true,
+          "createdAt": "2026-10-26T00:48:35.170Z"
         }
       ]
     },
@@ -126,7 +138,7 @@
       "openingHours": "06:00 - 21:00",
       "phone": "024 3821 2709",
       "rating": 5,
-      "reviewsCount": 16,
+      "reviewsCount": 17,
       "featured": true,
       "menu": [
         {
@@ -245,7 +257,7 @@
       "openingHours": "08:00 - 20:30",
       "phone": "024 3943 4106",
       "rating": 4.9,
-      "reviewsCount": 6,
+      "reviewsCount": 7,
       "featured": true,
       "menu": [
         {
@@ -3268,6 +3280,32 @@
       "status": "approved",
       "date": "2026-10-25",
       "createdAt": "2026-10-25T13:33:21.531Z"
+    },
+    {
+      "id": 27,
+      "restaurantId": 1,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Món ăn tuyệt vời tại Cơm Tấm Sài Gòn #1792975715122!",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-26",
+      "createdAt": "2026-10-26T00:48:35.124Z"
+    },
+    {
+      "id": 29,
+      "restaurantId": 2,
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userAvatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=200&q=80",
+      "rating": 5,
+      "content": "Nội dung thử nghiệm chống spam trùng lặp 1792975715139",
+      "images": [],
+      "status": "approved",
+      "date": "2026-10-26",
+      "createdAt": "2026-10-26T00:48:35.139Z"
     }
   ],
   "favorites": [
@@ -3300,6 +3338,539 @@
     "logoUrl": "/favicon.svg"
   },
   "orders": [
+    {
+      "id": "FH261026-ZN3P",
+      "code": "FH261026-ZN3P",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Khách",
+      "recipientPhone": "0988123456",
+      "deliveryAddress": "Hà Nội",
+      "addressDetails": null,
+      "note": "",
+      "items": [
+        {
+          "dishId": 101,
+          "id": 101,
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 1,
+          "note": "",
+          "total": 75000
+        }
+      ],
+      "totalItems": 1,
+      "subtotal": 75000,
+      "shippingFee": 15000,
+      "discount": 0,
+      "couponCode": "",
+      "appliedCoupon": "",
+      "total": 90000,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "ready",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-26T00:48:35.234Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        },
+        {
+          "status": "ready",
+          "time": "2026-10-26T00:48:35.239Z",
+          "message": "Món ăn đã chuẩn bị xong, sẵn sàng giao cho tài xế"
+        }
+      ],
+      "createdAt": "2026-10-26T00:48:35.234Z",
+      "updatedAt": "2026-10-26T00:48:35.239Z"
+    },
+    {
+      "id": "FH261026-XJEJ",
+      "code": "FH261026-XJEJ",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Khách Hủy Đơn",
+      "recipientPhone": "0988123456",
+      "deliveryAddress": "Hà Nội",
+      "addressDetails": null,
+      "note": "",
+      "items": [
+        {
+          "dishId": 101,
+          "id": 101,
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 1,
+          "note": "",
+          "total": 75000
+        }
+      ],
+      "totalItems": 1,
+      "subtotal": 75000,
+      "shippingFee": 15000,
+      "discount": 7500,
+      "couponCode": "FOODHUB10",
+      "appliedCoupon": "FOODHUB10",
+      "total": 82500,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "cancelled",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-26T00:48:35.225Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        },
+        {
+          "status": "cancelled",
+          "time": "2026-10-26T00:48:35.229Z",
+          "message": "Đơn hàng đã bị hủy bởi Khách hàng. Lý do: Tôi muốn thay đổi địa chỉ nhận hàng"
+        }
+      ],
+      "createdAt": "2026-10-26T00:48:35.225Z",
+      "updatedAt": "2026-10-26T00:48:35.229Z",
+      "cancelledBy": "Khách hàng",
+      "cancelledAt": "2026-10-26T00:48:35.229Z",
+      "cancelReason": "Tôi muốn thay đổi địa chỉ nhận hàng"
+    },
+    {
+      "id": "FH261026-GSQP",
+      "code": "FH261026-GSQP",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Khách Chuyển Khoản",
+      "recipientPhone": "0988123456",
+      "deliveryAddress": "Hà Nội",
+      "addressDetails": null,
+      "note": "",
+      "items": [
+        {
+          "dishId": 101,
+          "id": 101,
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 1,
+          "note": "",
+          "total": 75000
+        }
+      ],
+      "totalItems": 1,
+      "subtotal": 75000,
+      "shippingFee": 15000,
+      "discount": 0,
+      "couponCode": "",
+      "appliedCoupon": "",
+      "total": 90000,
+      "paymentMethod": "BANK_TRANSFER",
+      "paymentStatus": "unpaid",
+      "status": "pending",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-26T00:48:35.196Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        }
+      ],
+      "createdAt": "2026-10-26T00:48:35.196Z",
+      "updatedAt": "2026-10-26T00:48:35.196Z"
+    },
+    {
+      "id": "FH261026-VWHR",
+      "code": "FH261026-VWHR",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Khách COD",
+      "recipientPhone": "0988123456",
+      "deliveryAddress": "Hà Nội",
+      "addressDetails": null,
+      "note": "",
+      "items": [
+        {
+          "dishId": 101,
+          "id": 101,
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 1,
+          "note": "",
+          "total": 75000
+        }
+      ],
+      "totalItems": 1,
+      "subtotal": 75000,
+      "shippingFee": 15000,
+      "discount": 0,
+      "couponCode": "",
+      "appliedCoupon": "",
+      "total": 90000,
+      "paymentMethod": "COD",
+      "paymentStatus": "paid",
+      "status": "completed",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-26T00:48:35.191Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        },
+        {
+          "status": "confirmed",
+          "time": "2026-10-26T00:48:35.200Z",
+          "message": "Trạng thái: Quán ăn đã xác nhận đơn hàng (Admin chuyển sang confirmed)"
+        },
+        {
+          "status": "preparing",
+          "time": "2026-10-26T00:48:35.205Z",
+          "message": "Trạng thái: Quán ăn đang chuẩn bị món (Admin chuyển sang preparing)"
+        },
+        {
+          "status": "ready",
+          "time": "2026-10-26T00:48:35.210Z",
+          "message": "Trạng thái: Món ăn đã chuẩn bị xong, sẵn sàng giao cho tài xế (Admin chuyển sang ready)"
+        },
+        {
+          "status": "shipping",
+          "time": "2026-10-26T00:48:35.214Z",
+          "message": "Trạng thái: Tài xế đang giao hàng (Admin chuyển sang shipping)"
+        },
+        {
+          "status": "completed",
+          "time": "2026-10-26T00:48:35.219Z",
+          "message": "Trạng thái: Giao hàng thành công (Hoàn tất) (Admin chuyển sang completed)"
+        }
+      ],
+      "createdAt": "2026-10-26T00:48:35.191Z",
+      "updatedAt": "2026-10-26T00:48:35.219Z"
+    },
+    {
+      "id": "FH261026-11UU",
+      "code": "FH261026-11UU",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Test Price Hacker",
+      "recipientPhone": "0988112233",
+      "deliveryAddress": "Hà Nội",
+      "addressDetails": null,
+      "note": "",
+      "items": [
+        {
+          "dishId": 101,
+          "id": 101,
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 2,
+          "note": "",
+          "total": 150000
+        }
+      ],
+      "totalItems": 2,
+      "subtotal": 150000,
+      "shippingFee": 15000,
+      "discount": 0,
+      "couponCode": "",
+      "appliedCoupon": "",
+      "total": 165000,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "pending",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-26T00:48:35.175Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        }
+      ],
+      "createdAt": "2026-10-26T00:48:35.175Z",
+      "updatedAt": "2026-10-26T00:48:35.175Z"
+    },
+    {
+      "id": "FH261026-4UFK",
+      "code": "FH261026-4UFK",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Test Phone",
+      "recipientPhone": "0988776655",
+      "deliveryAddress": "Số 1 Cầu Giấy, Hà Nội",
+      "addressDetails": null,
+      "note": "",
+      "items": [
+        {
+          "dishId": 101,
+          "id": 101,
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 1,
+          "note": "",
+          "total": 75000
+        }
+      ],
+      "totalItems": 1,
+      "subtotal": 75000,
+      "shippingFee": 15000,
+      "discount": 0,
+      "couponCode": "",
+      "appliedCoupon": "",
+      "total": 90000,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "pending",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-26T00:48:35.165Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        }
+      ],
+      "createdAt": "2026-10-26T00:48:35.165Z",
+      "updatedAt": "2026-10-26T00:48:35.165Z"
+    },
+    {
+      "id": "FH261026-EOYL",
+      "code": "FH261026-EOYL",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 3,
+      "restaurantName": "Phở Gia Truyền Bát Đàn",
+      "restaurantAddress": "49 Bát Đàn, Hoàn Kiếm, Hà Nội",
+      "restaurantImage": "https://lh3.googleusercontent.com/aida-public/AB6AXuAhmMhaaewUqbqiA6mS8JySWUa6EzvV0ISI7N_JHrILF5eOWzLZ-AZRrE6V_wJSjd6MR7EcaWNSDsVY-yu8ESQWIX5pHH2gEwjAWJrKa5ube6AKktpygodVsrhPKqQYgVoArvy5GRx3uMr3oWGG15VscMKZltS_SkMK1XrBC0gJyC11iLRp7HEXMl_OrvyYU5J8Cb8HSA82aOzEoBissoVg0pn24-oXXk9ny3HJ-Y8dw2j4GMAarmJtag",
+      "recipientName": "Khách Test Quán Khác",
+      "recipientPhone": "0977665544",
+      "deliveryAddress": "49 Bát Đàn, Hoàn Kiếm, Hà Nội",
+      "addressDetails": null,
+      "note": "",
+      "items": [
+        {
+          "dishId": 301,
+          "id": 301,
+          "name": "Phở bò tái nạm",
+          "price": "60.000đ",
+          "priceNum": 60000,
+          "image": "",
+          "quantity": 1,
+          "note": "",
+          "total": 60000
+        }
+      ],
+      "totalItems": 1,
+      "subtotal": 60000,
+      "shippingFee": 15000,
+      "discount": 0,
+      "couponCode": "",
+      "appliedCoupon": "",
+      "total": 75000,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "pending",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-26T00:48:25.942Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        }
+      ],
+      "createdAt": "2026-10-26T00:48:25.942Z",
+      "updatedAt": "2026-10-26T00:48:25.942Z"
+    },
+    {
+      "id": "FH261026-NQPI",
+      "code": "FH261026-NQPI",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Nguyễn Văn A",
+      "recipientPhone": "0988123456",
+      "deliveryAddress": "Số 13 Lò Đúc, Hai Bà Trưng, Hà Nội",
+      "addressDetails": {
+        "province": "Hà Nội",
+        "district": "Hai Bà Trưng",
+        "ward": "Phạm Đình Hổ",
+        "street": "Số 13 Lò Đúc"
+      },
+      "note": "Giao nhanh giúp mình",
+      "items": [
+        {
+          "dishId": 104,
+          "id": 104,
+          "name": "Trứng gà trần",
+          "price": "10.000đ",
+          "priceNum": 10000,
+          "image": "",
+          "quantity": 3,
+          "note": "Trần lòng đào",
+          "total": 30000
+        },
+        {
+          "dishId": 101,
+          "id": 101,
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 1,
+          "note": "Ít bánh phở",
+          "total": 75000
+        }
+      ],
+      "totalItems": 4,
+      "subtotal": 105000,
+      "shippingFee": 15000,
+      "discount": 0,
+      "couponCode": "",
+      "appliedCoupon": "",
+      "total": 120000,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "pending",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-26T00:48:25.921Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        }
+      ],
+      "createdAt": "2026-10-26T00:48:25.921Z",
+      "updatedAt": "2026-10-26T00:48:25.921Z"
+    },
+    {
+      "id": "FH261026-CYJ9",
+      "code": "FH261026-CYJ9",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Khách Hàng Thử Nghiệm",
+      "recipientPhone": "0987654321",
+      "deliveryAddress": "Số 123 Đường Láng, Đống Đa, Hà Nội",
+      "addressDetails": null,
+      "note": "",
+      "items": [
+        {
+          "dishId": 101,
+          "id": 101,
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 2,
+          "note": "",
+          "total": 150000
+        }
+      ],
+      "totalItems": 2,
+      "subtotal": 150000,
+      "shippingFee": 15000,
+      "discount": 45000,
+      "couponCode": "PROMO3830",
+      "appliedCoupon": "PROMO3830",
+      "total": 120000,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "pending",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-26T00:48:03.860Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        }
+      ],
+      "createdAt": "2026-10-26T00:48:03.860Z",
+      "updatedAt": "2026-10-26T00:48:03.860Z"
+    },
+    {
+      "id": "FH261026-VXVN",
+      "code": "FH261026-VXVN",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 1,
+      "restaurantName": "Phở Thìn Lò Đúc",
+      "restaurantAddress": "13 Lò Đúc, Phường Phạm Đình Hổ, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1582878826629-29b7ad1cdc43?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Khách Hàng Thử Nghiệm",
+      "recipientPhone": "0987654321",
+      "deliveryAddress": "Số 123 Đường Láng, Đống Đa, Hà Nội",
+      "addressDetails": null,
+      "note": "",
+      "items": [
+        {
+          "dishId": 101,
+          "id": 101,
+          "name": "Phở tái lăn đặc biệt",
+          "price": "75.000đ",
+          "priceNum": 75000,
+          "image": "",
+          "quantity": 2,
+          "note": "",
+          "total": 150000
+        }
+      ],
+      "totalItems": 2,
+      "subtotal": 150000,
+      "shippingFee": 15000,
+      "discount": 45000,
+      "couponCode": "PROMO8664",
+      "total": 120000,
+      "paymentMethod": "COD",
+      "paymentStatus": "unpaid",
+      "status": "pending",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-26T00:45:08.695Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        }
+      ],
+      "createdAt": "2026-10-26T00:45:08.695Z",
+      "updatedAt": "2026-10-26T00:45:08.695Z"
+    },
     {
       "id": "FH261025-XX1S",
       "code": "FH261025-XX1S",
@@ -4585,7 +5156,7 @@
       "restaurantName": "",
       "restaurantAddress": "",
       "items": [],
-      "updatedAt": "2026-10-25T17:14:18.741Z"
+      "updatedAt": "2026-10-26T00:48:35.234Z"
     },
     {
       "userId": 1,
@@ -4604,7 +5175,7 @@
           "note": ""
         }
       ],
-      "updatedAt": "2026-10-25T13:32:14.590Z"
+      "updatedAt": "2026-10-26T00:48:19.255Z"
     }
   ],
   "coupons": [

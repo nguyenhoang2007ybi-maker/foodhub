@@ -9,15 +9,21 @@ export function calculateCouponDiscount(coupon, subtotal, shippingFee = 15000) {
   let discount = 0;
   if (!coupon) return 0;
 
+  const numSubtotal = Math.max(0, Number(subtotal) || 0);
+  const numShip = Math.max(0, Number(shippingFee) || 0);
+
   if (coupon.type === 'percent') {
-    const rawDiscount = Math.round((subtotal * Number(coupon.value || 0)) / 100);
-    const max = Number(coupon.maxDiscount) || Infinity;
-    discount = Math.min(rawDiscount, max);
+    const rawDiscount = Math.round((numSubtotal * Number(coupon.value || 0)) / 100);
+    const max = Number(coupon.maxDiscount);
+    discount = (max && max > 0) ? Math.min(rawDiscount, max) : rawDiscount;
+    discount = Math.min(numSubtotal, discount);
   } else if (coupon.type === 'fixed') {
-    discount = Math.min(subtotal, Number(coupon.value || 0));
+    const val = Math.max(0, Number(coupon.value || 0));
+    discount = Math.min(numSubtotal, val);
   } else if (coupon.type === 'freeship') {
-    const max = Number(coupon.maxDiscount) || shippingFee;
-    discount = Math.min(shippingFee, max);
+    const max = Number(coupon.maxDiscount);
+    const cap = (max && max > 0) ? Math.min(numShip, max) : numShip;
+    discount = Math.min(numShip, cap);
   }
   return Math.max(0, discount);
 }
@@ -33,15 +39,34 @@ export function validateCouponLogic(coupon, { subtotal = 0, restaurantId, userId
   }
 
   const now = new Date();
-  if (coupon.startDate && new Date(coupon.startDate) > now) {
-    return { valid: false, message: 'Mã giảm giá chưa đến ngày áp dụng.' };
+  if (coupon.startDate) {
+    let start;
+    if (typeof coupon.startDate === 'string' && coupon.startDate.length <= 10) {
+      const parts = coupon.startDate.split('-').map(Number);
+      if (parts.length === 3) {
+        start = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+      } else {
+        start = new Date(coupon.startDate);
+      }
+    } else {
+      start = new Date(coupon.startDate);
+    }
+    if (start > now) {
+      return { valid: false, message: 'Mã giảm giá chưa đến ngày áp dụng.' };
+    }
   }
 
   if (coupon.endDate) {
-    const end = new Date(coupon.endDate);
-    // Tính hết ngày nếu chỉ có ngày YYYY-MM-DD
-    if (coupon.endDate.length <= 10) {
-      end.setHours(23, 59, 59, 999);
+    let end;
+    if (typeof coupon.endDate === 'string' && coupon.endDate.length <= 10) {
+      const parts = coupon.endDate.split('-').map(Number);
+      if (parts.length === 3) {
+        end = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
+      } else {
+        end = new Date(coupon.endDate);
+      }
+    } else {
+      end = new Date(coupon.endDate);
     }
     if (end < now) {
       return { valid: false, message: 'Mã giảm giá đã hết hạn sử dụng.' };
@@ -49,7 +74,7 @@ export function validateCouponLogic(coupon, { subtotal = 0, restaurantId, userId
   }
 
   const minOrder = Number(coupon.minOrder) || 0;
-  if (subtotal < minOrder) {
+  if (Number(subtotal) < minOrder) {
     return {
       valid: false,
       message: `Đơn hàng tối thiểu ${minOrder.toLocaleString('vi-VN')} đ để sử dụng mã này.`
@@ -65,11 +90,11 @@ export function validateCouponLogic(coupon, { subtotal = 0, restaurantId, userId
   // Giới hạn lượt dùng của từng người dùng
   if (userId) {
     const perUserLimit = Number(coupon.perUserLimit) || 1;
-    const userUsedCount = (coupon.usedBy || []).filter(u => u.userId === userId).length;
+    const userUsedCount = (coupon.usedBy || []).filter(u => String(u.userId) === String(userId)).length;
     if (userUsedCount >= perUserLimit) {
       return {
         valid: false,
-        message: `Bạn đã sử dụng mã này ${userUsedCount}/${perUserLimit} lần (đã đạt giới hạn).`
+        message: `Bạn đã sử dụng mã này ${userUsedCount}/${perUserLimit} lần (đã đạt giới hạn tối đa).`
       };
     }
   }
@@ -99,7 +124,28 @@ router.get('/public', (req, res) => {
   const publicCoupons = db.coupons
     .filter(c => {
       if (c.isActive === false) return false;
-      if (c.endDate && new Date(c.endDate) < now) return false;
+      if (c.startDate) {
+        let start;
+        if (typeof c.startDate === 'string' && c.startDate.length <= 10) {
+          const parts = c.startDate.split('-').map(Number);
+          if (parts.length === 3) start = new Date(parts[0], parts[1] - 1, parts[2], 0, 0, 0, 0);
+          else start = new Date(c.startDate);
+        } else {
+          start = new Date(c.startDate);
+        }
+        if (start > now) return false;
+      }
+      if (c.endDate) {
+        let end;
+        if (typeof c.endDate === 'string' && c.endDate.length <= 10) {
+          const parts = c.endDate.split('-').map(Number);
+          if (parts.length === 3) end = new Date(parts[0], parts[1] - 1, parts[2], 23, 59, 59, 999);
+          else end = new Date(c.endDate);
+        } else {
+          end = new Date(c.endDate);
+        }
+        if (end < now) return false;
+      }
       const totalLimit = Number(c.totalLimit);
       if (!isNaN(totalLimit) && totalLimit > 0 && (c.usedCount || 0) >= totalLimit) return false;
       return true;
@@ -151,7 +197,9 @@ router.post('/validate', optionalAuth, (req, res) => {
     });
   }
 
-  const discount = calculateCouponDiscount(coupon, Number(subtotal) || 0);
+  const subtotalNum = Number(subtotal) || 0;
+  const shippingFee = subtotalNum >= 200000 ? 0 : 15000;
+  const discount = calculateCouponDiscount(coupon, subtotalNum, shippingFee);
 
   res.json({
     success: true,

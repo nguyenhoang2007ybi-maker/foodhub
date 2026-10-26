@@ -245,6 +245,7 @@ router.post('/', authenticateToken, (req, res) => {
       shippingFee,
       discount,
       couponCode: appliedCoupon,
+      appliedCoupon: appliedCoupon,
       total,
       paymentMethod: normMethod,
       paymentStatus: 'unpaid', // unpaid | paid | refunded
