@@ -91,7 +91,7 @@ async function loadUserData() {
       if (editAvatar) editAvatar.value = user.avatar || '';
     }
   } catch (err) {
-    console.error('Lỗi nạp thông tin user:', err);
+    console.error('Lỗi nạp thông tin user: - profile.js:94', err);
   }
 }
 
@@ -246,7 +246,7 @@ async function loadMyReviews() {
       });
     }
   } catch (err) {
-    console.error('Lỗi nạp đánh giá cá nhân:', err);
+    console.error('Lỗi nạp đánh giá cá nhân: - profile.js:249', err);
     container.innerHTML = `<div class="text-rose-500 text-xs py-4 text-center">Không thể nạp danh sách đánh giá.</div>`;
   }
 }
@@ -262,7 +262,7 @@ async function loadUserAddresses() {
       renderAddressesList(res.data);
     }
   } catch (err) {
-    console.error('Lỗi nạp sổ địa chỉ:', err);
+    console.error('Lỗi nạp sổ địa chỉ: - profile.js:265', err);
     container.innerHTML = '<div class="text-rose-500 text-xs py-4 text-center">Không thể tải sổ địa chỉ.</div>';
   }
 

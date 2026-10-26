@@ -45,6 +45,18 @@
           "fullAddress": "Ngõ 20 Duy Tân, Tòa FPT, Dịch Vọng Hậu, Cầu Giấy, Hà Nội",
           "isDefault": true,
           "createdAt": "2026-10-25T13:33:14.079Z"
+        },
+        {
+          "id": 3,
+          "recipientName": "Nguyễn Văn A",
+          "phone": "0988123456",
+          "province": "Hà Nội",
+          "district": "Bắc Từ Liêm",
+          "ward": "48 phu kieu",
+          "street": "48 , P. 48 phu kieu, Q. Bắc Từ Liêm, Hà Nội",
+          "fullAddress": "48 , P. 48 phu kieu, Q. Bắc Từ Liêm, Hà Nội, 48 phu kieu, Bắc Từ Liêm, Hà Nội",
+          "isDefault": false,
+          "createdAt": "2026-10-25T17:14:18.734Z"
         }
       ]
     },
@@ -3289,6 +3301,83 @@
   },
   "orders": [
     {
+      "id": "FH261025-XX1S",
+      "code": "FH261025-XX1S",
+      "userId": 2,
+      "userName": "Nguyễn Văn A",
+      "userEmail": "khachhang@foodhub.vn",
+      "restaurantId": 2,
+      "restaurantName": "Bún Chả Hương Liên (Bún Chả Obama)",
+      "restaurantAddress": "24 Lê Văn Hưu, Phường Phan Chu Trinh, Hai Bà Trưng, Hà Nội",
+      "restaurantImage": "https://images.unsplash.com/photo-1594998893017-36147cbcae05?auto=format&fit=crop&w=800&q=80",
+      "recipientName": "Nguyễn Văn A",
+      "recipientPhone": "0988123456",
+      "deliveryAddress": "48 , P. 48 phu kieu, Q. Bắc Từ Liêm, Hà Nội, P. 48 phu kieu, Q. Bắc Từ Liêm, Hà Nội",
+      "addressDetails": {
+        "province": "Hà Nội",
+        "district": "Bắc Từ Liêm",
+        "ward": "48 phu kieu",
+        "street": "48 , P. 48 phu kieu, Q. Bắc Từ Liêm, Hà Nội"
+      },
+      "note": "",
+      "items": [
+        {
+          "dishId": 201,
+          "id": 201,
+          "name": "Bún chả đặc biệt",
+          "price": "60.000đ",
+          "priceNum": 60000,
+          "image": "",
+          "quantity": 1,
+          "note": "",
+          "total": 60000
+        }
+      ],
+      "totalItems": 1,
+      "subtotal": 60000,
+      "shippingFee": 15000,
+      "discount": 0,
+      "couponCode": "",
+      "total": 75000,
+      "paymentMethod": "COD",
+      "paymentStatus": "paid",
+      "status": "completed",
+      "timeline": [
+        {
+          "status": "pending",
+          "time": "2026-10-25T17:14:18.741Z",
+          "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        },
+        {
+          "status": "confirmed",
+          "time": "2026-10-25T17:14:49.484Z",
+          "message": "Quán ăn đã xác nhận đơn hàng"
+        },
+        {
+          "status": "preparing",
+          "time": "2026-10-25T17:15:00.239Z",
+          "message": "Quán ăn đang chuẩn bị món"
+        },
+        {
+          "status": "ready",
+          "time": "2026-10-25T17:15:14.856Z",
+          "message": "Món ăn đã chuẩn bị xong, sẵn sàng giao cho tài xế"
+        },
+        {
+          "status": "shipping",
+          "time": "2026-10-25T17:15:28.955Z",
+          "message": "Tài xế đang giao hàng"
+        },
+        {
+          "status": "completed",
+          "time": "2026-10-25T17:15:40.110Z",
+          "message": "Giao hàng thành công (Hoàn tất)"
+        }
+      ],
+      "createdAt": "2026-10-25T17:14:18.741Z",
+      "updatedAt": "2026-10-25T17:15:40.110Z"
+    },
+    {
       "id": "FH261025-UCHR",
       "code": "FH261025-UCHR",
       "userId": 2,
@@ -3324,7 +3413,7 @@
       "total": 90000,
       "paymentMethod": "COD",
       "paymentStatus": "unpaid",
-      "status": "ready",
+      "status": "cancelled",
       "timeline": [
         {
           "status": "pending",
@@ -3335,10 +3424,15 @@
           "status": "ready",
           "time": "2026-10-25T13:33:14.244Z",
           "message": "Món ăn đã chuẩn bị xong, sẵn sàng giao cho tài xế"
+        },
+        {
+          "status": "cancelled",
+          "time": "2026-10-25T17:14:35.424Z",
+          "message": "Đơn hàng đã bị hủy"
         }
       ],
       "createdAt": "2026-10-25T13:33:14.233Z",
-      "updatedAt": "2026-10-25T13:33:14.244Z"
+      "updatedAt": "2026-10-25T17:14:35.424Z"
     },
     {
       "id": "FH261025-GYZ2",
@@ -3431,16 +3525,21 @@
       "total": 90000,
       "paymentMethod": "BANK_TRANSFER",
       "paymentStatus": "unpaid",
-      "status": "pending",
+      "status": "cancelled",
       "timeline": [
         {
           "status": "pending",
           "time": "2026-10-25T13:33:14.120Z",
           "message": "Đơn hàng được khởi tạo thành công (Chờ xác nhận)"
+        },
+        {
+          "status": "cancelled",
+          "time": "2026-10-25T17:14:37.539Z",
+          "message": "Đơn hàng đã bị hủy"
         }
       ],
       "createdAt": "2026-10-25T13:33:14.120Z",
-      "updatedAt": "2026-10-25T13:33:14.120Z"
+      "updatedAt": "2026-10-25T17:14:37.539Z"
     },
     {
       "id": "FH261025-A2KE",
@@ -4486,7 +4585,7 @@
       "restaurantName": "",
       "restaurantAddress": "",
       "items": [],
-      "updatedAt": "2026-10-25T13:33:14.233Z"
+      "updatedAt": "2026-10-25T17:14:18.741Z"
     },
     {
       "userId": 1,
@@ -4598,11 +4697,11 @@
       "perUserLimit": 1,
       "scope": "all",
       "description": "Mã ưu đãi HOANGDEPZAI",
-      "isActive": true,
+      "isActive": false,
       "usedCount": 0,
       "usedBy": [],
       "createdAt": "2026-10-25T12:45:57.447Z",
-      "updatedAt": "2026-10-25T12:45:57.447Z"
+      "updatedAt": "2026-10-25T17:13:33.867Z"
     }
   ]
 }
